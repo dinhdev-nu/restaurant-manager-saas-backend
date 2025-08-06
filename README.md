@@ -1,4 +1,5 @@
-
+# Multi Restaurant Manager - NestJS Monolith
+This is a monolithic application built with NestJS for managing multiple restaurants. It includes features such as user management, authentication, order processing, menu management, and more.
 
 ## Project Structure
 ```bash
