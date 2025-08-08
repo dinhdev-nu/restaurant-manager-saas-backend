@@ -32,3 +32,9 @@ export class NotFoundException extends HttpExceptionConfig {
         super(message, HttpStatus.NOT_FOUND, statusCode);
     }
 }
+
+export class InternalServerErrorException extends HttpExceptionConfig {
+    constructor(message: string = "Internal Server Error", statusCode: number = HttpStatus.INTERNAL_SERVER_ERROR) {
+        super(message, HttpStatus.INTERNAL_SERVER_ERROR, statusCode);
+    }
+}

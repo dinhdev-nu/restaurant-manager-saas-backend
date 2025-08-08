@@ -2,8 +2,6 @@ import { Body, Controller, Get, Param, ParseIntPipe, Post, Req, Res } from '@nes
 import { AppService } from './app.service';
 import { IsInt, IsString, Length } from 'class-validator';
 import { BadRequestException } from './common/exceptions/http-exception';
-import { Request, Response } from 'express';
-import { ResponseToClient } from './common/utils/response.util';
 
 
 class User {
@@ -22,7 +20,7 @@ export class AppController {
 
   @Get()
   getHello() {
-    // throw new BadRequestException("This is a bad request example", 4004);
+    throw new BadRequestException("This is a bad request example", 4004);
     // return this.appService.getHello();
     return this.appService.getHello();
   }

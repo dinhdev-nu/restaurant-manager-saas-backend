@@ -9,12 +9,13 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ValidationPipeConfig } from './config/validation.config';
 import { HTTP_ExceptionFilter } from './common/filters/exception.filter';
-import { SuccessResponseInterceptor } from './common/interceptor/success-response.interceptor';
+import { SuccessResponseInterceptor } from './common/interceptors/success-response.interceptor';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { LoggerModule } from './common/logger/logger.module';
 
 @Module({
   controllers: [AppController],
-  providers: [
-    AppService,
+  providers: [AppService,
     {
       provide: APP_PIPE,
       useClass: ValidationPipeConfig,
@@ -26,14 +27,19 @@ import { SuccessResponseInterceptor } from './common/interceptor/success-respons
     {
       provide: APP_INTERCEPTOR,
       useClass: SuccessResponseInterceptor
+    },
+    {
+      provide: APP_INTERCEPTOR, 
+      useClass: LoggingInterceptor
     }
   ],
   imports: [
-    MeModule, UsersModule, AuthsModule,
+    MeModule, UsersModule, AuthsModule, 
     ConfigModule.forRoot({  
       envFilePath: '.env',
       isGlobal: true,
     }),
+    LoggerModule
   ],
 })
 export class AppModule implements NestModule {

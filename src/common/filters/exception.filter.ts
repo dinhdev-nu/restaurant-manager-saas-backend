@@ -12,7 +12,7 @@ export class HTTP_ExceptionFilter<T> implements ExceptionFilter {
 
     const ex = exception as HttpExceptionConfig;
     const status = ex.getStatus(); // http status code
-    const message = ex.getResponse();
+    const message = ex.getResponse(); 
     const code = ex.statusCode || status; // Code custom 
 
 
