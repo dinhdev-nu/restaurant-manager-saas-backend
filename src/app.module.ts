@@ -12,6 +12,7 @@ import { HTTP_ExceptionFilter } from './common/filters/exception.filter';
 import { SuccessResponseInterceptor } from './common/interceptors/success-response.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { LoggerModule } from './common/logger/logger.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   controllers: [AppController],
@@ -39,7 +40,8 @@ import { LoggerModule } from './common/logger/logger.module';
       envFilePath: '.env',
       isGlobal: true,
     }),
-    LoggerModule
+    LoggerModule,
+    RedisModule
   ],
 })
 export class AppModule implements NestModule {
