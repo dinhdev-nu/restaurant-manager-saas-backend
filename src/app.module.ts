@@ -13,6 +13,9 @@ import { SuccessResponseInterceptor } from './common/interceptors/success-respon
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { LoggerModule } from './common/logger/logger.module';
 import { RedisModule } from './redis/redis.module';
+import { MongoModule } from './databases/mongo/mongo.module';
+import { LoadConfigModule } from './config/load-config.module';
+import { MongooseModule } from '@nestjs/mongoose';
 
 @Module({
   controllers: [AppController],
@@ -35,13 +38,15 @@ import { RedisModule } from './redis/redis.module';
     }
   ],
   imports: [
-    MeModule, UsersModule, AuthsModule, 
-    ConfigModule.forRoot({  
-      envFilePath: '.env',
-      isGlobal: true,
-    }),
+    LoadConfigModule,
+
+
+    // MeModule, UsersModule, AuthsModule,
+
     LoggerModule,
-    RedisModule
+
+    RedisModule,
+    MongoModule,
   ],
 })
 export class AppModule implements NestModule {
