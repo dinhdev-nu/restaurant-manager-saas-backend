@@ -41,7 +41,7 @@ import { MongooseModule } from '@nestjs/mongoose';
     LoadConfigModule,
 
 
-    // MeModule, UsersModule, AuthsModule,
+    MeModule, UsersModule, AuthsModule,
 
     LoggerModule,
 
