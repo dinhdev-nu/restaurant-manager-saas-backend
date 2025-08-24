@@ -1,7 +1,6 @@
 import { Global, Logger, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { MONGO_DB_NAME, MONGO_URI } from 'src/common/constants/mongo.consts';
-import { MongoLifecycleService } from './mongo.service';
 import { Connection } from 'mongoose';
 
 @Global()

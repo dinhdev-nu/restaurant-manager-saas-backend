@@ -1,34 +1,51 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthsService } from './auths.service';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { LoginDto, RegisterDTO, VerifyOtpDTO } from './dto/auth.dto';
+import { Request } from 'express';
+import { JwtGuard } from 'src/common/guards/jwt/jwt.guard';
 
 @Controller('auths')
 export class AuthsController {
   constructor(private readonly authsService: AuthsService) {}
 
-  @Post()
-  create(@Body() createAuthDto: CreateAuthDto) {
-    return this.authsService.create(createAuthDto);
+  @Post("/register")
+  getUser(@Body() registerDto: RegisterDTO): Promise<string> {
+    return this.authsService.register(registerDto)
   }
 
-  @Get()
-  findAll() {
-    return this.authsService.findAll();
+  @Post("/send-otp")
+  sendOtp(@Body() registerDto: RegisterDTO): Promise<boolean> {
+    return this.authsService.sendOtp(registerDto)
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.authsService.findOne(+id);
+  @Get("/verify-otp")
+  verifyOtp(@Body() verifyOtpDto: VerifyOtpDTO): Promise<boolean> {
+    return this.authsService.verifyOtp(verifyOtpDto)
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
-    return this.authsService.update(+id, updateAuthDto);
+  @Post("/signup")
+  signup(@Body() registerDto: RegisterDTO): Promise<boolean> {
+    return this.authsService.signup(registerDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.authsService.remove(+id);
+  @Post("/login")
+  login(
+    @Body() loginDto: LoginDto,
+    @Req() req: Request
+  ) {
+    loginDto.ip = req.ip
+    return this.authsService.login(loginDto); 
   }
+
+  @Post("/refresh")
+  refreshToken(@Body('refreshToken') refreshToken: string): Promise<{ accessToken: string, refreshToken: string }> {
+    return this.authsService.refreshToken(refreshToken);
+  }
+
+  @UseGuards(JwtGuard)
+  @Post("/logout")
+  logout(@Req() req: Request): Promise<boolean> {
+    return this.authsService.logout(req["user"]);
+  }
+
 }
