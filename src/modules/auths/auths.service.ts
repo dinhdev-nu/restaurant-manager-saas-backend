@@ -41,8 +41,6 @@ export class AuthsService {
       throw new BadRequestException('Email or phone is required');
     }
 
-    console.log(`Registering user with email: ${registerDto.email}, phone: ${registerDto.phone}`);
-
     // Check user exists
     const orConditions: { email?: string; phone?: string }[] = [];
     if (registerDto.email) {
@@ -295,9 +293,13 @@ export class AuthsService {
     return new Types.ObjectId(id);
   }
 
+
+  async getUserById(id: string): Promise<UserDocument | null> {
+    const user = await this.userModel.findById(this.convertStringToObjectId(id));
+    return user;
+  }
+
 }
-
-
 
 
 
