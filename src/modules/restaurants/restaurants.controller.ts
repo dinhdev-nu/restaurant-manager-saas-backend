@@ -38,6 +38,4 @@ export class RestaurantsController {
     return this.restaurantsService.createNewItem(restaurantId, createItemDto);
   }
 
-  
-
 }

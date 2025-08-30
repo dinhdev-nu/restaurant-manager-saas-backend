@@ -12,7 +12,9 @@ import { RedisModule } from './redis/redis.module';
 import { MongoModule } from './databases/mongo/mongo.module';
 import { LoadConfigModule } from './config/load-config.module';
 import { RestaurantsModule } from './modules/restaurants/restaurants.module';
+import { OrdersModule } from './modules/orders/orders.module'
 import { RolesGuard } from './common/guards/roles/roles.guard';
+import { PaymentsModule } from './modules/payments/payments.module';
 
 @Module({
   controllers: [],
@@ -49,6 +51,8 @@ import { RolesGuard } from './common/guards/roles/roles.guard';
     RedisModule,
     MongoModule,
     RestaurantsModule,
+    OrdersModule,
+    PaymentsModule
   ],
 })
 export class AppModule implements NestModule {

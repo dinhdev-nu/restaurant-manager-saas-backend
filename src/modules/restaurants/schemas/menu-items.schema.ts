@@ -3,7 +3,7 @@ import { Types } from "mongoose";
 
 export type MenuItemDocument = MenuItem & Document;
 
-@Schema()
+@Schema({ timestamps: true })
 export class MenuItem {
 
     @Prop({ type: Types.ObjectId, ref: "Restaurant" })

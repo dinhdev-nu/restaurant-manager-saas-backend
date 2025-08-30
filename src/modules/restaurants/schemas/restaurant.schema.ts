@@ -3,7 +3,7 @@ import { Types } from "mongoose";
 
 export type RestaurantDocument =  Restaurant & Document;
 
-@Schema()
+@Schema({ timestamps: true })
 export class Restaurant {
   @Prop({ required: true, trim: true, length: 25 })
   name: string;
