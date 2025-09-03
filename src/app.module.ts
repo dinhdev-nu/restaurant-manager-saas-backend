@@ -15,6 +15,7 @@ import { RestaurantsModule } from './modules/restaurants/restaurants.module';
 import { OrdersModule } from './modules/orders/orders.module'
 import { RolesGuard } from './common/guards/roles/roles.guard';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 
 @Module({
   controllers: [],
