@@ -4,35 +4,23 @@ import { AuthsController } from './auths.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UserSchema } from './schema/user.schema';
 import { SessionSchema } from './schema/session.schema';
-import { JwtModule, JwtService } from '@nestjs/jwt';
+import { JwtModule } from '@nestjs/jwt';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
 
   imports: [
-    JwtModule.registerAsync({ // async load config
-      useFactory: () => ({
-        secret: process.env.JWT_ACCESS_SECRET || "access_secret",
-        signOptions: { expiresIn: process.env.JWT_ACCESS_TTL || '2h' }
-      })
-    }),
+    JwtModule,
     MongooseModule.forFeature([
     { name: "User", schema: UserSchema },
     { name: "Session", schema: SessionSchema }
-  ])],
+  ]),
+  MailModule
+],
 
   controllers: [AuthsController],
-  providers: [
-    AuthsService,
-    {
-      provide: 'JWT_REFRESH_SECRET',
-      useFactory: () => {
-        return new JwtService({
-          secret: process.env.JWT_REFRESH_SECRET || "refresh_secret",
-          signOptions: { expiresIn: process.env.JWT_REFRESH_TTL || '7d' }
-        })
-      }
-    }
-  ],
+  providers: [AuthsService],
+  exports: [AuthsService, JwtModule]
 })
 export class AuthsModule {}
    
