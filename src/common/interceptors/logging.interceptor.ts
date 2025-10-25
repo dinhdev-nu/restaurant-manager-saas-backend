@@ -21,7 +21,7 @@ export class LoggingInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap(data => {
         const responseTime = Date.now() - now;
-        const statusCode = response.statusCode;
+        const statusCode = response.statusCode || 200;
         const logLevel = process.env.LOG_LEVEL || 'info';
 
         let message = `[${new Date().toISOString()}] [${logLevel.toUpperCase()}] [${method}] ${statusCode} ${url} - ${responseTime}ms`;
@@ -32,7 +32,7 @@ export class LoggingInterceptor implements NestInterceptor {
 
       catchError((error) => {
         const responseTime = Date.now() - now;
-        const statusCode = error.status;
+        const statusCode = error.status || 500;
 
         let message = `[${new Date().toISOString()}] [ERROR] [${method}] ${statusCode} ${url} - ${responseTime}ms`;
         console.error(message);

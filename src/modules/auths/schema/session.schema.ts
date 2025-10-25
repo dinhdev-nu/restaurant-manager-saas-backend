@@ -5,26 +5,31 @@ export type SessionDocument = Session & Document;
 
 @Schema({ timestamps: true })
 export class Session {
+  @Prop({ type: Types.ObjectId, required: true, ref: 'User' })
+  userID: Types.ObjectId;
 
-    @Prop({ type: Types.ObjectId, required: true, ref: 'User' })
-    userID: Types.ObjectId;
+  @Prop({ unique: true })
+  sid: string; 
 
-    @Prop({ unique: true })
-    refreshToken?: string;
+  @Prop()
+  refreshTokenHash?: string;
 
-    @Prop()
-    ip?: string;
+  @Prop()
+  ip?: string;
 
-    @Prop({ default: 0 })
-    version: number;
+  @Prop()
+  userAgent?: string;
 
-    @Prop( { default: true } )
-    isValid: boolean;
+  @Prop({ default: 0 })
+  version: number;
 
-    @Prop({ required: true, expires: 0 })
-    expiredAt: Date;
+  @Prop({ default: true })
+  isValid: boolean;
 
+  @Prop({ required: true })
+  expiredAt: Date;
 }
 
-
 export const SessionSchema = SchemaFactory.createForClass(Session);
+
+SessionSchema.index({ "expiredAt": 1 }, { expireAfterSeconds: 0 });  // TTL index to auto-remove expired sessions
