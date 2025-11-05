@@ -21,8 +21,8 @@ type OTPCache = {
   FailCount: number
 }
 
-type JWTPayloadAT = { sid: string, sub: string, roles: string[] }
-type JWTPayloadRT = { sid: string, sub: string, version: number, jti: string, roles?: string[] }
+export type JWTPayloadAT = { sid: string, sub: string, roles: string[] }
+export type JWTPayloadRT = { sid: string, sub: string, version: number, jti: string, roles?: string[] }
 
 
 export type SessionOut = { 
@@ -154,8 +154,7 @@ export class AuthsService {
       email: signupDto.email,
       phone: signupDto.phone,
       isActive: true,
-      roles: ['customer'],
-      providers: ['local'],
+      roles: ['user'],
       password: passwordHash,
       user_name: signupDto.email ? signupDto.email.split('@')[0] : ( signupDto.phone ? signupDto.phone : 'user' ),
     });
@@ -170,7 +169,7 @@ export class AuthsService {
       throw new BadRequestException('Email or phone is required');
 
     // Find User by email or phone
-    const query: any = { active: true }
+    const query: any = {}
     const orConditions: { email?: string; phone?: string }[] = [];
     if (loginDto.email) {
       orConditions.push({ email: loginDto.email })
@@ -180,11 +179,14 @@ export class AuthsService {
     }
 
     query.$or = orConditions;
-    const user = await this.userModel.findOne(query);
+
+    console.log('Login query:', query);
+    const user = await this.userModel.findOne(query).lean();
 
     // Check User
     if (!user) throw new UnauthorizedException('User not found');
-    if (!user.providers.includes('local')) throw new UnauthorizedException('User not registered with local provider');
+    const isLocalProvider = user.providers.find(p => p.name === 'local');
+    if (!isLocalProvider) throw new UnauthorizedException('User not registered with local provider');
     if (!user.isActive) throw new ForbiddenException('User is inactive');
 
     // Check Password
@@ -192,8 +194,7 @@ export class AuthsService {
     if (!isPasswordMatch) throw new UnauthorizedException('Invalid password');
 
     // Create Session
-    const { accessToken, refreshToken } = await this.createSession(user, user._id.toString(), loginDto.ip, '');
-
+    const { accessToken, refreshToken } = await this.createSession(user, loginDto.ip, "");
 
     return { accessToken, refreshToken, user }
   } 
@@ -222,13 +223,17 @@ export class AuthsService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    // Find Session 
-    const session = await this.sessionModel.findOne({
-      sid: payload.sid,
-      userID: new Types.ObjectId(payload.sub),
-      isValid: true,
-    })
+    // Find User & Session 
+    const [user, session] = await Promise.all([
+      this.userModel.findById(new Types.ObjectId(payload.sub)).lean(),
+      this.sessionModel.findOne({
+        sid: payload.sid,
+        userID: new Types.ObjectId(payload.sub),
+        isValid: true,
+      })
+    ]);
 
+    if (!user) throw new UnauthorizedException('User not found');
     if (!session) throw new UnauthorizedException('Session not found');
 
     // Compare refresh token
@@ -242,7 +247,7 @@ export class AuthsService {
     const newAccessTokenPayload: JWTPayloadAT = {
       sid: session.sid,
       sub: session.userID.toString(),
-      roles: payload.roles || []
+      roles: user.roles
     }
     const newAccessToken = this.jwtAccessService.sign(newAccessTokenPayload, { expiresIn : '15m' });
 
@@ -251,7 +256,7 @@ export class AuthsService {
       sub: session.userID.toString(),
       version: session.version + 1,
       jti: randomUUID(),
-      roles: payload.roles || []
+      roles: user.roles
     }
     const newRefreshToken = this.jwtAccessService.sign(newRefreshTokenPayload, { expiresIn : '7d' });
     
@@ -260,48 +265,51 @@ export class AuthsService {
     session.version += 1;
     await session.save();
 
+    // có thể cache session ở redis nếu cần verify thêm ở jwt guard
+    this.redis.set(`auth:${user._id}:${session._id}`, JSON.stringify({user, session: session.toObject()}), 'EX', 60 * 15); // 15 minutes
+
     return { accessToken: newAccessToken, refreshToken: newRefreshToken };
   }
 
-  async createSession(user: UserDocument, userId: string, ip?: string, userAgent?: string): Promise<{ accessToken: string; refreshToken: string; }> {
+  async createSession(user: UserDocument, ip?: string, userAgent?: string): Promise<{ accessToken: string; refreshToken: string; }> {
 
     const sid = randomUUID();
 
     // AccessToken 
     const payloadAT: JWTPayloadAT = {
       sid,
-      sub: userId,
+      sub: user._id.toString(),
       roles: user.roles
     }
     const accessToken = this.jwtAccessService.sign(payloadAT, { expiresIn: this.JWT_ACCESS_TTL, secret: this.JWT_ACCESS_SECRET });
 
     // RefreshToken 
-    const patloadRT: JWTPayloadRT = {
+    const payloadRT: JWTPayloadRT = {
       sid,
-      sub: userId,
+      sub: user._id.toString(),
       version: 0,
       jti: randomUUID(),
       roles: user.roles
     }
-    const refreshToken = this.jwtRefreshService.sign(patloadRT, { expiresIn: this.JWT_REFRESH_TTL, secret: this.JWT_REFRESH_SECRET });
+    const refreshToken = this.jwtRefreshService.sign(payloadRT, { expiresIn: this.JWT_REFRESH_TTL, secret: this.JWT_REFRESH_SECRET });
 
     // Save session to DB
-    const resfreshTokenHash = await bcrypt.hash(refreshToken, 10);
+    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
 
     const session = await this.sessionModel.create({ 
-      userID: new Types.ObjectId(userId),
+      userID: new Types.ObjectId(user._id),
       sid,
-      refreshToken: resfreshTokenHash,
+      refreshToken: refreshTokenHash,
       ip,
       userAgent,
       version: 0,
       expiredAt: expiresAt
     })
 
-    // Cache accessToken 
-    this.redis.set(`auth:${userId}:${sid}`, JSON.stringify(session), 'EX', 60 * 15); // 15 minutes
+    // Cache accessToken ( ko cần nếu ko verify thêm ở jwt guard )
+    this.redis.set(`auth:${user._id}:${sid}`, JSON.stringify({user, session: session.toObject()}), 'EX', 60 * 16); // 16 minutes
     
     return { accessToken, refreshToken };
   }
@@ -351,7 +359,6 @@ export class AuthsService {
 
     const userGoogleProfile = await userInfoRess.json();
     const { email, name, picture, sub } = userGoogleProfile
-    console.log(userGoogleProfile);
 
     // Check user exists 
     let user = await this.userModel.findOne({ email });
@@ -366,7 +373,8 @@ export class AuthsService {
         providerId: sub,
       })
     } else {
-      if (!user.providers.includes("google")) throw new UnauthorizedException("Please link the email in setting!")
+      const isGoogleProvider = user.providers.find(p => p.name === 'google');
+      if (!isGoogleProvider) throw new UnauthorizedException("Please link the email in setting!")
       if (!user.isActive) {
         user.isActive = true
         user.save()
@@ -384,13 +392,13 @@ export class AuthsService {
     }
     const accessToken = this.jwtAccessService.sign(payloadAT, { expiresIn: this.JWT_ACCESS_TTL, secret: this.JWT_ACCESS_SECRET });
 
-    const patloadRT: JWTPayloadRT = {
+    const payloadRT: JWTPayloadRT = {
       sid,
       sub: user._id.toString(),
       version: 0,
       jti: randomUUID()
     }
-    const refreshToken = this.jwtRefreshService.sign(patloadRT, { expiresIn: this.JWT_REFRESH_TTL, secret: this.JWT_REFRESH_SECRET });
+    const refreshToken = this.jwtRefreshService.sign(payloadRT, { expiresIn: this.JWT_REFRESH_TTL, secret: this.JWT_REFRESH_SECRET });
     const rfTokenHash = await bcrypt.hash(refreshToken, 10)
     const expiredAt = new Date()
     expiredAt.setDate(expiredAt.getDate() + 7)

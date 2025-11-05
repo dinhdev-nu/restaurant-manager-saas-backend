@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Types } from "mongoose";
+import { HydratedDocument, Types } from "mongoose";
 
-export type SessionDocument = Session & Document;
+export type SessionDocument = HydratedDocument<Session>;
 
 @Schema({ timestamps: true })
 export class Session {

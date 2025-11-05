@@ -1,9 +1,12 @@
-import { Body, Controller, Get, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, Res } from '@nestjs/common';
 import { AuthsService } from './auths.service';
 import { LoginDto, RegisterDTO, SignupDTO, VerifyOtpDTO } from './dto/auth.dto';
-import { Request, Response, response } from 'express';
-import { JwtGuard } from 'src/common/guards/jwt/jwt.guard';
+import { Request, Response } from 'express';
 import { UnauthorizedException } from 'src/common/exceptions/http-exception';
+import { UserSession } from 'src/common/decorator/session.decorator';
+import { UserHeaderRequest } from 'src/common/guards/jwt/jwt.guard';
+import { RefreshToken } from 'src/common/decorator/refreshToken.decorator';
+import { Protected } from 'src/common/decorator/protected.decorator';
 
 @Controller('auths')
 export class AuthsController {
@@ -31,7 +34,7 @@ export class AuthsController {
   }
 
   @Post("/login")
-  async login(@Body() loginDto: LoginDto, @Res() res: Response): Promise<any> {
+  async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response): Promise<any> {
     const loginPayload = { ...loginDto, ip: loginDto.ip || (res.req as Request).ip } as LoginDto;
     const data = await this.authsService.login(loginPayload);
 
@@ -39,7 +42,7 @@ export class AuthsController {
     res.cookie('RT', data.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production', // Set to true in production
-      sameSite: 'strict',
+      sameSite: 'lax', // cho phép khác domain
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     })
 
@@ -49,32 +52,31 @@ export class AuthsController {
     return data;
   }
 
-  @UseGuards(JwtGuard)
   @Post("/logout")
-  logout(@Req() req: Request, @Res() res: Response): Promise<boolean> {
-    const user = req['user'] as any;
+  @Protected(false)
+  logout(@UserSession() user: UserHeaderRequest, @Res({ passthrough: true }) res: Response): Promise<boolean> {
+    const payload = user.ATPayload;
     res.clearCookie('RT');
-    return this.authsService.logout(user.sub, user.sid);
+    return this.authsService.logout(payload.sub, payload.sid);
   }
 
-  @UseGuards(JwtGuard)
   @Post("/revoke-sessions")
-  revokeSessions(@Req() req: Request, @Res() res: Response): Promise<boolean> {
-    const user = req['user'] as any;
+  @Protected(false)
+  revokeSessions(@UserSession() user: UserHeaderRequest, @Res({ passthrough: true }) res: Response): Promise<boolean> {
+    const payload = user.ATPayload;
     res.clearCookie('RT');
-    return this.authsService.revokeUserSessions(user.sub);
+    return this.authsService.revokeUserSessions(payload.sub);
   }
 
   @Post("/refresh")
-  async refresh(@Req() req: Request, @Res() res: Response): Promise<{ accessToken: string }> {
-    const rt = req.cookies['RT'];
-    if (!rt) throw new UnauthorizedException("Missing refresh token");
+  async refresh(@RefreshToken() rfCookies: string, @Res({ passthrough: true }) res: Response): Promise<{ accessToken: string }> {
+    if (!rfCookies) throw new UnauthorizedException("Missing refresh token");
   
-    const newSession = await this.authsService.refreshToken(rt);
+    const newSession = await this.authsService.refreshToken(rfCookies);
     res.cookie('RT', newSession.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production', // Set to true in production
-      sameSite: 'strict', // Cùng domain
+      sameSite: 'lax', // cho phép khác domain // Cùng domain
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -88,7 +90,7 @@ export class AuthsController {
   }
 
   @Get("/google/callback")
-  async googleAuthCallback(@Query('code') code: string,@Req() req: Request, @Res() res: Response) {
+  async googleAuthCallback(@Query('code') code: string,@Req() req: Request, @Res({ passthrough: true }) res: Response) {
 
     const session = await this.authsService.loginWithGoogle(code, req.ip)
 
@@ -96,7 +98,7 @@ export class AuthsController {
     res.cookie('RT', session.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production', // Set to true in production
-      sameSite: 'strict', // Cùng domain
+      sameSite: 'lax', // cho phép khác domain
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     })
     session.refreshToken = "";

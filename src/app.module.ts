@@ -8,17 +8,23 @@ import { HTTP_ExceptionFilter } from './common/filters/exception.filter';
 import { SuccessResponseInterceptor } from './common/interceptors/success-response.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { LoggerModule } from './common/logger/logger.module';
-import { RedisModule } from './redis/redis.module';
+import { RedisModule } from './databases/redis/redis.module';
 import { MongoModule } from './databases/mongo/mongo.module';
 import { LoadConfigModule } from './config/load-config.module';
 import { RestaurantsModule } from './modules/restaurants/restaurants.module';
 import { OrdersModule } from './modules/orders/orders.module'
 import { RolesGuard } from './common/guards/roles/roles.guard';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { JwtModule } from '@nestjs/jwt';
+import { JwtGuard } from './common/guards/jwt/jwt.guard';
 
 @Module({
   controllers: [],
   providers: [
+    {
+      provide: APP_GUARD,
+      useClass: JwtGuard,
+    },
     {
       provide: APP_GUARD,
       useClass: RolesGuard,
@@ -45,13 +51,12 @@ import { PaymentsModule } from './modules/payments/payments.module';
 
 
     UsersModule, AuthsModule,
+    RestaurantsModule,
 
     LoggerModule,
 
     RedisModule,
     MongoModule,
-    AuthsModule,
-    // RestaurantsModule,
     // OrdersModule,
     // PaymentsModule
   ],

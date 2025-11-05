@@ -1,9 +1,18 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Types } from "mongoose";
+import { HydratedDocument, Types } from "mongoose";
 
-export type UserDocument = User & Document;
+export type UserDocument = HydratedDocument<User>;
 
+const USER_ROLES = ["admin", "user", "customer"];
 const PROVIDER = ["local", "google", "facebook"];
+
+@Schema()
+export class Provider {
+    @Prop({ enum: PROVIDER, default: "local" })
+    name: string;
+    @Prop()
+    providerId: string;
+}
 
 @Schema({ timestamps: true })
 export class User {
@@ -28,19 +37,13 @@ export class User {
     @Prop({ default: true })
     isActive: boolean;
 
-    @Prop({ type: [String], default: ["customer"] })
+    @Prop({ type: [String], enum: USER_ROLES, default: ["user"] })
     roles: string[];
 
-    @Prop({ enum: PROVIDER, default: "local" })
-    providers: string;
-
-    @Prop()
-    providerId?: string;
-
-    @Prop({ type: [Types.ObjectId], ref: "Restaurant", default: null })
-    restaurant?: Types.ObjectId[];
-
+    @Prop({ type: [Provider], default: [{ name: "local", providerId: "" }] })
+    providers: Provider[];
 }
+
 
 
 export const UserSchema = SchemaFactory.createForClass(User);
