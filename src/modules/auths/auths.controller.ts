@@ -71,7 +71,6 @@ export class AuthsController {
   @Post("/refresh")
   async refresh(@RefreshToken() rfCookies: string, @Res({ passthrough: true }) res: Response): Promise<{ accessToken: string }> {
     if (!rfCookies) throw new UnauthorizedException("Missing refresh token");
-  
     const newSession = await this.authsService.refreshToken(rfCookies);
     res.cookie('RT', newSession.refreshToken, {
       httpOnly: true,
@@ -90,7 +89,7 @@ export class AuthsController {
   }
 
   @Get("/google/callback")
-  async googleAuthCallback(@Query('code') code: string,@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  async googleAuthCallback(@Query('code') code: string,@Req() req: Request, @Res() res: Response) {
 
     const session = await this.authsService.loginWithGoogle(code, req.ip)
 
@@ -109,7 +108,7 @@ export class AuthsController {
       maxAge: 60 * 1000
     });
 
-    return res.redirect(process.env.CLIENT_URL! + `auth?provider=google`);
+    res.redirect(process.env.CLIENT_URL! + `auth?provider=google`);
   }
 
 }

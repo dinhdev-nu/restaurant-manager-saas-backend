@@ -218,17 +218,18 @@ export class AuthsService {
 
     let payload: JWTPayloadRT;
     try {
-      payload = this.jwtRefreshService.verify(token);
+      payload = this.jwtRefreshService.verify(token, { secret: this.JWT_REFRESH_SECRET });
     } catch(e) {
-      throw new UnauthorizedException('Invalid refresh token');
+      console.log(e);
+      throw new UnauthorizedException('Invalid refresh token 1');
     }
 
     // Find User & Session 
     const [user, session] = await Promise.all([
       this.userModel.findById(new Types.ObjectId(payload.sub)).lean(),
       this.sessionModel.findOne({
-        sid: payload.sid,
         userID: new Types.ObjectId(payload.sub),
+        sid: payload.sid,
         isValid: true,
       })
     ]);
@@ -238,7 +239,7 @@ export class AuthsService {
 
     // Compare refresh token
     const isTokenMatch = await bcrypt.compare(token, session.refreshTokenHash || '');
-    if (!isTokenMatch) throw new UnauthorizedException('Invalid refresh token');
+    if (!isTokenMatch) throw new UnauthorizedException('Invalid refresh token 1');
 
     // Check token version 
     if (payload.version !== session.version) throw new UnauthorizedException('Token has been revoked');
@@ -249,7 +250,10 @@ export class AuthsService {
       sub: session.userID.toString(),
       roles: user.roles
     }
-    const newAccessToken = this.jwtAccessService.sign(newAccessTokenPayload, { expiresIn : '15m' });
+    const newAccessToken = this.jwtAccessService.sign(
+      newAccessTokenPayload, 
+      {  expiresIn: this.JWT_ACCESS_TTL, secret: this.JWT_ACCESS_SECRET }
+    );
 
     const newRefreshTokenPayload: JWTPayloadRT = {
       sid: session.sid,
@@ -258,7 +262,10 @@ export class AuthsService {
       jti: randomUUID(),
       roles: user.roles
     }
-    const newRefreshToken = this.jwtAccessService.sign(newRefreshTokenPayload, { expiresIn : '7d' });
+    const newRefreshToken = this.jwtAccessService.sign(
+      newRefreshTokenPayload, 
+      {  expiresIn: this.JWT_REFRESH_TTL, secret: this.JWT_REFRESH_SECRET }
+    );
     
     // Update session
     session.refreshTokenHash = await bcrypt.hash(newRefreshToken, 10);
@@ -266,7 +273,7 @@ export class AuthsService {
     await session.save();
 
     // có thể cache session ở redis nếu cần verify thêm ở jwt guard
-    this.redis.set(`auth:${user._id}:${session._id}`, JSON.stringify({user, session: session.toObject()}), 'EX', 60 * 15); // 15 minutes
+    await this.redis.set(`auth:${user._id}:${session.sid}`, JSON.stringify({user, session: session.toObject()}), 'EX', 60 * 16); // 16 minutes
 
     return { accessToken: newAccessToken, refreshToken: newRefreshToken };
   }
@@ -309,7 +316,7 @@ export class AuthsService {
     })
 
     // Cache accessToken ( ko cần nếu ko verify thêm ở jwt guard )
-    this.redis.set(`auth:${user._id}:${sid}`, JSON.stringify({user, session: session.toObject()}), 'EX', 60 * 16); // 16 minutes
+    await this.redis.set(`auth:${user._id}:${sid}`, JSON.stringify({user, session: session.toObject()}), 'EX', 60 * 16); // 16 minutes
     
     return { accessToken, refreshToken };
   }
@@ -369,8 +376,9 @@ export class AuthsService {
         user_name: name, 
         avatar: picture,
         email,
-        providers: 'google',
-        providerId: sub,
+        providers: [{ name: 'google', providerId: sub }],
+        isActive: true,
+        roles: ['user']
       })
     } else {
       const isGoogleProvider = user.providers.find(p => p.name === 'google');
@@ -403,7 +411,8 @@ export class AuthsService {
     const expiredAt = new Date()
     expiredAt.setDate(expiredAt.getDate() + 7)
 
-    await this.sessionModel.create({
+    // Save session
+    const session = await this.sessionModel.create({
       userID: user._id,
       sid,
       refreshTokenHash: rfTokenHash,
@@ -412,7 +421,10 @@ export class AuthsService {
       expiredAt
     })
 
-    return { accessToken, refreshToken, user}
+     // Cache
+     await this.redis.set(`auth:${user._id}:${sid}`, JSON.stringify({ user, session: session.toObject()}), 'EX', 60 * 16); // 16 minutes  
+
+    return { accessToken, refreshToken, user }
 
   }
  

@@ -40,15 +40,16 @@ export class JwtGuard implements CanActivate {
 
     if (!token) throw new UnauthorizedException("Missing access token");
 
-    let payload: any;
+    let payload: JWTPayloadAT;
     try {
-      payload = this.jwt.verify(token);
-    } catch {
+      payload = this.jwt.verify(token, { secret: process.env.JWT_ACCESS_SECRET });
+    } catch (error) {
       throw new UnauthorizedException("Invalid or expired access token");
     }
 
     const { sub, sid } = payload;
-    const rawData = await this.redis.get(`auth:${sub}:${sid}`);
+    const key = `auth:${sub}:${sid}`; 
+    const rawData = await this.redis.get(key);
     const data = JSON.parse(rawData!);
     const { user, session } = data || {};
 
