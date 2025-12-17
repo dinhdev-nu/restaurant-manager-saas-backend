@@ -9,10 +9,19 @@ export const RolesArray = Object.values(Role);
 export enum RestaurantRole {
   OWNER = 'owner',
   MANAGER = 'manager',
-  STAFF = 'staff',
-  DELIVERY = 'delivery',
+  CASHIER = 'cashier',
+  CLEANER = 'cleaner',
+  WAITER = 'waiter',
   KITCHEN = 'kitchen',
-  SERVER = 'server',
 }
 
 export const RestaurantRolesArray = Object.values(RestaurantRole); 
+
+export enum RestaurantRoleDisplay {
+  OWNER = 'Chủ nhà hàng',
+  MANAGER = 'Quản lý',
+  CASHIER = 'Thu ngân',
+  CLEANER = 'Nhân viên vệ sinh',
+  WAITER = 'Phục vụ',
+  KITCHEN = 'Nhân viên bếp',
+}
