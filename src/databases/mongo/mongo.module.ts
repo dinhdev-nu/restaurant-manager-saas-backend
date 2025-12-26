@@ -1,7 +1,7 @@
 import { Global, Logger, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { MONGO_DB_NAME, MONGO_URI } from 'src/common/constants/mongo.consts';
 import { Connection } from 'mongoose';
+import { MONGO_URI } from 'src/common/constants/mongo.consts';
 
 @Global()
 @Module({
@@ -9,8 +9,7 @@ import { Connection } from 'mongoose';
     MongooseModule.forRootAsync({
       useFactory: async () => ({
         uri: process.env.MONGO_URI || MONGO_URI,
-        dbName: process.env.MONGO_DB_NAME || MONGO_DB_NAME,
-         onConnectionCreate: (connection: Connection) => {
+        connectionFactory: (connection: Connection) => {
 
           const logger = new Logger('MongoDB');
 
