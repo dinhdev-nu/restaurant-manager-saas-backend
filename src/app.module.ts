@@ -1,4 +1,4 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { UsersModule } from './modules/users/users.module';
 import { AuthsModule } from './modules/auths/auths.module';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
@@ -15,6 +15,7 @@ import { OrdersModule } from './modules/orders/orders.module'
 import { RolesGuard } from './common/guards/roles/roles.guard';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { JwtGuard } from './common/guards/jwt/jwt.guard';
+import { SseModule } from './modules/sse/sse.module';
 
 @Module({
   controllers: [],
@@ -47,16 +48,16 @@ import { JwtGuard } from './common/guards/jwt/jwt.guard';
   imports: [
     LoadConfigModule,
 
-
+    SseModule,
     UsersModule, AuthsModule,
     RestaurantsModule,
+    OrdersModule,
+    PaymentsModule,
 
     LoggerModule,
 
     RedisModule,
     MongoModule,
-    // OrdersModule,
-    // PaymentsModule
   ],
 })
 export class AppModule {}
