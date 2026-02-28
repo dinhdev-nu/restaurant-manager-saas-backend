@@ -1,25 +1,36 @@
-import { Type } from "@nestjs/common";
-import { IsEnum, IsNumber, IsString } from "class-validator";
+import { IsEnum, IsMongoId, IsNumber, IsString, Min } from "class-validator";
+import { PaymentMethod } from "../schemas/payment.schema";
 
 export class CreatePaymentByCashDto {
 
-    @IsString()
+    @IsMongoId()
+    restaurantId: string;
+
+    @IsMongoId()
     orderId: string;
 
     @IsNumber()
-    amount: number;
+    @Min(0)
+    paidAmount: number;
 
-    @IsString()
-    method: string;
+    @IsEnum(PaymentMethod)
+    method: PaymentMethod;
 
 }
 
 export class CreatePaymentDto {
 
-    @IsString()
+    @IsMongoId()
+    restaurantId: string;
+
+    @IsMongoId()
     orderId: string;
 
-    @IsEnum(['credit_card', 'paypal', 'bank_transfer', 'cash'])
-    method: string;
+    @IsNumber()
+    @Min(0)
+    amount: number;
+
+    @IsEnum(PaymentMethod)
+    method: PaymentMethod;
 
 }

@@ -1,7 +1,20 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Types } from "mongoose";
+import { HydratedDocument, Types } from "mongoose";
 
-export type PaymentDocument = Payment & Document;
+export type PaymentDocument = HydratedDocument<Payment>;
+
+export enum PaymentStatus {
+    PENDING = 'pending',
+    SUCCESS = 'success',
+    FAILED = 'failed'
+}
+
+export enum PaymentMethod {
+    CREDIT_CARD = 'credit_card',
+    PAYPAL = 'paypal',
+    CASH = 'cash',
+    QR_CODE = 'qr_code',
+}
 
 @Schema({ timestamps: true })
 export class Payment {
@@ -12,19 +25,22 @@ export class Payment {
     restaurantId: Types.ObjectId
 
     @Prop({ required: true })
-    amount: number
+    orderAmount: number // Tổng tiền đơn hàng
 
-    @Prop({ enum: ['credit_card', 'paypal', 'bank_transfer', 'cash'], required: true })
-    method: string
+    @Prop({ required: true })
+    paidAmount: number // Số tiền khách đưa
 
-    @Prop({ enum: ['pending', 'success', 'failed'], default: 'pending' })
-    status: string;
+    @Prop({ required: true })
+    changeAmount: number // Tiền thừa
+
+    @Prop({ enum: PaymentMethod, required: true })
+    method: PaymentMethod;
+
+    @Prop({ enum: PaymentStatus, default: PaymentStatus.PENDING })
+    status: PaymentStatus;
 
     @Prop()
-    transactionId?: string;
-
-    @Prop({ default: Date.now })
-    paidAt: Date;
+    transactionId?: string; // ID giao dịch từ cổng thanh toán
 
 }
 

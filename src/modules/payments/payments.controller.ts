@@ -1,34 +1,26 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
-import { CreatePaymentDto } from './dto/create-payment.dto';
-import { UpdatePaymentDto } from './dto/update-payment.dto';
+import { CreatePaymentByCashDto, CreatePaymentDto } from './dto/create-payment.dto';
+import { Protected, Roles } from 'src/common/decorator';
+import { Role } from 'src/common/enums/roles.enum';
 
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
-  @Post()
-  create(@Body() createPaymentDto: CreatePaymentDto) {
-    return this.paymentsService.create(createPaymentDto);
+  @Post('/cash')
+  @Protected()
+  @Roles(Role.ADMIN, Role.CUSTOMER)
+  async paymentByCash(@Body() createPaymentDto: CreatePaymentByCashDto) {
+    const restaurantId = createPaymentDto.restaurantId;
+    return this.paymentsService.paymentByCash(createPaymentDto, restaurantId);
   }
 
-  @Get()
-  findAll() {
-    return this.paymentsService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.paymentsService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePaymentDto: UpdatePaymentDto) {
-    return this.paymentsService.update(+id, updatePaymentDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.paymentsService.remove(+id);
+  @Post('/qr-code')
+  @Protected()
+  @Roles(Role.ADMIN, Role.CUSTOMER)
+  async paymentByQrCode(@Body() createPaymentDto: CreatePaymentDto) {
+    const restaurantId = createPaymentDto.restaurantId;
+    return this.paymentsService.paymentByQrCode(createPaymentDto, restaurantId);
   }
 }
