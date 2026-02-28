@@ -1,9 +1,11 @@
-import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseBoolPipe, ParseIntPipe, Post, Query } from '@nestjs/common';
 import { OrdersService } from './orders.service';
-import { CreateOrderDto } from './dto/create-order.dto';
-import { JwtGuard } from 'src/common/guards/jwt/jwt.guard';
-import { Roles } from 'src/common/decorator/roles.decorator';
+import { Protected, Roles, UserSession } from 'src/common/decorator';
 import { Role } from 'src/common/enums/roles.enum';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { ChangeOrderStatusDto } from './dto/change-order-status.dto';
+import { UserHeaderRequest } from 'src/common/guards/jwt/jwt.guard';
+
 
 @Controller('orders')
 export class OrdersController {
@@ -11,30 +13,69 @@ export class OrdersController {
 
 
   @Post()
-  @UseGuards( JwtGuard )
-  @Roles( Role.ADMIN )
+  @Protected()
+  @Roles( Role.ADMIN, Role.CUSTOMER )
   createOrder(@Body() createOrderDto: CreateOrderDto) {
     return this.ordersService.create(createOrderDto);
   }
 
-  @Post(':orderId')
-  @UseGuards( JwtGuard )
-  @Roles( Role.ADMIN )
-  addItemToOrder(@Param('orderId') orderId: string, @Body() body: {
-    itemId: string;
-    quantity: number;
-  }) {
-    return this.ordersService.addItemToOrder(orderId, body.itemId, body.quantity);
+
+  // Cần cơ chế chống spam
+  @Post('/draft')
+  createDraftOrder(@Body() createOrderDto: CreateOrderDto) {
+    return this.ordersService.createDraftOrder(createOrderDto);
+  }
+
+  @Get('/drafts/:restaurantId')
+  @Protected()
+  @Roles(Role.ADMIN, Role.CUSTOMER)
+  getDraftOrders(
+    @UserSession() user: UserHeaderRequest,
+    @Param('restaurantId') restaurantId: string, 
+    @Query('isMyDrafts', new ParseBoolPipe({ optional: true })) isMyDrafts?: boolean
+  ) {
+    const targetUserId = isMyDrafts ? user.ATPayload.sub : undefined;
+    
+    return this.ordersService.getListDraftOrders(restaurantId, targetUserId);
+  }
+
+  @Post('/change-status')
+  @Protected()
+  @Roles( Role.ADMIN, Role.CUSTOMER )
+  changeOrderStatus(@Body() changeOrderStatusDto: ChangeOrderStatusDto) {
+    const { orderId, status } = changeOrderStatusDto;
+    return this.ordersService.changeOrderStatus(orderId, status);
+  }
+  
+  @Get('/user/:restaurantId')
+  @Protected()
+  @Roles( Role.ADMIN, Role.CUSTOMER )
+  getOrdersForUser(
+    @UserSession() user: UserHeaderRequest,
+    @Param('restaurantId') restaurantId: string
+  ) {
+    return this.ordersService.getOrdersForUser(restaurantId, user.ATPayload.sub);
+  }
+
+  @Get('/:restaurantId')
+  @Protected()
+  @Roles( Role.ADMIN, Role.CUSTOMER )
+  getOrders(
+    @Param('restaurantId') restaurantId: string, 
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
+    @Query('status') status?: any
+  ) {
+    console.log('Query Params:', { page, limit, status });
+    return this.ordersService.findOrdersByRestaurant(restaurantId, page, limit, { status: status });
   }
 
 
-  @Post(':orderId/status')
-  @UseGuards( JwtGuard )
-  @Roles( Role.ADMIN )
-  updateOrderStatus(@Param('orderId') orderId: string, @Body() body: {
-    status: string;
-  }) {
-    return this.ordersService.updateStatus(orderId, body.status);
+  @Get('/checkout/:orderId')
+  @Protected()
+  @Roles( Role.ADMIN, Role.CUSTOMER )
+  getOrderCheckoutDetails(@Param('orderId') orderId: string) {
+    return this.ordersService.getOrderCheckoutDetailsById(orderId);
   }
 
 }
