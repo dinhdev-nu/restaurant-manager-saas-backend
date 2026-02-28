@@ -11,8 +11,8 @@ export class SseController {
   @Protected()
   streamEvents(@UserSession() user: UserHeaderRequest) {
     const userId = user.ATPayload.sub;
-    
-    return this.sseService.subscribleToEvents(userId);
+    console.log(`User ${userId} connected to SSE stream`);
+    return this.sseService.subscribeToEvents(userId);
   }
   
 }
