@@ -14,6 +14,7 @@ import { JwtService } from '@nestjs/jwt';
 import { MailService } from '../mail/mail.service';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
+import { UserHeaderRequest } from 'src/common/guards/jwt/jwt.guard';
 
 
 type OTPCache = {
@@ -273,7 +274,12 @@ export class AuthsService {
     await session.save();
 
     // có thể cache session ở redis nếu cần verify thêm ở jwt guard
-    await this.redis.set(`auth:${user._id}:${session.sid}`, JSON.stringify({user, session: session.toObject()}), 'EX', 60 * 16); // 16 minutes
+    const dataCahe = {
+      info: user,
+      session: session.toObject(),
+      ATPayload: newAccessTokenPayload
+    }
+    await this.redis.set(`auth:${user._id}:${session.sid}`, JSON.stringify(dataCahe), 'EX', 60 * 16); // 16 minutes
 
     return { accessToken: newAccessToken, refreshToken: newRefreshToken };
   }
@@ -316,7 +322,12 @@ export class AuthsService {
     })
 
     // Cache accessToken ( ko cần nếu ko verify thêm ở jwt guard )
-    await this.redis.set(`auth:${user._id}:${sid}`, JSON.stringify({user, session: session.toObject()}), 'EX', 60 * 16); // 16 minutes
+    const dataCahe: UserHeaderRequest = {
+      info: user,
+      session: session.toObject(),
+      ATPayload: payloadAT
+    }
+    await this.redis.set(`auth:${user._id}:${sid}`, JSON.stringify(dataCahe), 'EX', 60 * 16); // 16 minutes
     
     return { accessToken, refreshToken };
   }
@@ -422,7 +433,12 @@ export class AuthsService {
     })
 
      // Cache
-     await this.redis.set(`auth:${user._id}:${sid}`, JSON.stringify({ user, session: session.toObject()}), 'EX', 60 * 16); // 16 minutes  
+     const dataCahe: UserHeaderRequest = {
+      info: user,
+      session: session.toObject(),
+      ATPayload: payloadAT
+    }
+     await this.redis.set(`auth:${user._id}:${sid}`, JSON.stringify(dataCahe), 'EX', 60 * 16); // 16 minutes  
 
     return { accessToken, refreshToken, user }
 

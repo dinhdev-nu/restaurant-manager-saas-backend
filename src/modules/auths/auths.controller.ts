@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, Query, Req, Res } from '@nestjs/common';
-import { AuthsService } from './auths.service';
+import { AuthsService, JWTPayloadAT } from './auths.service';
 import { LoginDto, RegisterDTO, SignupDTO, VerifyOtpDTO } from './dto/auth.dto';
 import { Request, Response } from 'express';
 import { UnauthorizedException } from 'src/common/exceptions/http-exception';
@@ -53,17 +53,17 @@ export class AuthsController {
   }
 
   @Post("/logout")
-  @Protected(false)
+  @Protected()
   logout(@UserSession() user: UserHeaderRequest, @Res({ passthrough: true }) res: Response): Promise<boolean> {
-    const payload = user.ATPayload;
+    const payload = user.ATPayload as JWTPayloadAT;
     res.clearCookie('RT');
     return this.authsService.logout(payload.sub, payload.sid);
   }
 
   @Post("/revoke-sessions")
-  @Protected(false)
+  @Protected()
   revokeSessions(@UserSession() user: UserHeaderRequest, @Res({ passthrough: true }) res: Response): Promise<boolean> {
-    const payload = user.ATPayload;
+    const payload = user.ATPayload as JWTPayloadAT;
     res.clearCookie('RT');
     return this.authsService.revokeUserSessions(payload.sub);
   }
@@ -110,5 +110,4 @@ export class AuthsController {
 
     res.redirect(process.env.CLIENT_URL! + `auth?provider=google`);
   }
-
 }

@@ -15,8 +15,8 @@ import { MailModule } from '../mail/mail.module';
     { name: "User", schema: UserSchema },
     { name: "Session", schema: SessionSchema }
   ]),
-  MailModule
-],
+    MailModule
+  ],
 
   controllers: [AuthsController],
   providers: [AuthsService],
