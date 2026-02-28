@@ -33,12 +33,13 @@ export class JwtGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const isProtected = this.reflector.get<boolean>(PROTECTED_KEY, context.getHandler());
     if (!isProtected) return true; // Skip guard for public routes
-
     const request = context.switchToHttp().getRequest();
-    const header = request.headers['authorization'] || "";
-    const token = header.split(" ")[1];
 
-    if (!token) throw new UnauthorizedException("Missing access token");
+    const header = request.headers['authorization'] || "";
+
+    const token = header.split(" ")[1];
+    if (!token) 
+      throw new UnauthorizedException("Missing access token");
 
     let payload: JWTPayloadAT;
     try {
@@ -50,15 +51,13 @@ export class JwtGuard implements CanActivate {
     const { sub, sid } = payload;
     const key = `auth:${sub}:${sid}`; 
     const rawData = await this.redis.get(key);
-    const data = JSON.parse(rawData!);
-    const { user, session } = data || {};
+    const data = JSON.parse(rawData!) as UserHeaderRequest;
 
     request.user = {
       ATPayload: payload,
-      info: user,
-      session: session
+      info: data.info,
+      session: data.session
     } as UserHeaderRequest;
-
     return true
   }
 }

@@ -5,6 +5,13 @@ import { ResponseDTO } from '../interfaces/response.interface';
 @Injectable()
 export class SuccessResponseInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    const ctx = context.switchToHttp()
+    const request = ctx.getRequest<Request>();
+
+    if ( request.url.includes('/events/stream') ) {
+      return next.handle();
+    }
+
     return next.handle().pipe(
       map((data) => {
         const response: ResponseDTO = {
