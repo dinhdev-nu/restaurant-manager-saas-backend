@@ -7,7 +7,7 @@ import { ITEMSTATUS, MenuItem, MenuItemDocument } from './schemas/menu-items.sch
 import { CreateItemDto } from './dto/create-item.dto';
 import { Shift, Staff, StaffDocument } from './schemas/staff.schema';
 import { RestaurantRole, Role } from 'src/common/enums/roles.enum';
-import { User, UserDocument } from '../auths/schema/user.schema';
+import { User, UserDocument } from '../auth/schema/user.schema';
 import { Inject, Injectable } from '@nestjs/common';
 import { REDIS_CLIENT } from 'src/common/constants/redis.const';
 import Redis from 'ioredis';
@@ -25,7 +25,7 @@ export interface MenuItemsOut {
 }
 
 @Injectable()
-export class RestaurantsService {
+export class RestaurantService {
 
   constructor (
     @InjectModel(Restaurant.name) private readonly restaurantModel: Model<RestaurantDocument>,

@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
-import { PaymentsService } from './payments.service';
-import { PaymentsController } from './payments.controller';
+import { PaymentService } from './payment.service';
+import { PaymentController } from './payment.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PaymentSchema } from './schemas/payment.schema';
-import { OrderSchema } from '../orders/schemas/order.schema';
+import { OrderSchema } from '../order/schemas/order.schema';
 import { SseModule } from '../sse/sse.module';
 
 @Module({
-  controllers: [PaymentsController],
-  providers: [PaymentsService],
+  controllers: [PaymentController],
+  providers: [PaymentService],
   imports: [
     MongooseModule.forFeature([
       { name: "Payment", schema: PaymentSchema },
@@ -17,4 +17,4 @@ import { SseModule } from '../sse/sse.module';
     SseModule
   ]
 })
-export class PaymentsModule {}
+export class PaymentModule {}

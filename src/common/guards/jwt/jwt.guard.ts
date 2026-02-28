@@ -10,9 +10,9 @@ import { PROTECTED_KEY } from 'src/common/decorator/protected.decorator';
 // import { Observable } from 'rxjs';
 // import { REDIS_CLIENT } from 'src/common/constants/redis.const';
 import { UnauthorizedException } from 'src/common/exceptions/http-exception';
-import { JWTPayloadAT } from 'src/modules/auths/auths.service';
-import { SessionDocument } from 'src/modules/auths/schema/session.schema';
-import { UserDocument } from 'src/modules/auths/schema/user.schema';
+import { JWTPayloadAT } from 'src/modules/auth/auth.service';
+import { SessionDocument } from 'src/modules/auth/schema/session.schema';
+import { UserDocument } from 'src/modules/auth/schema/user.schema';
 // import { Session, SessionDocument } from 'src/modules/auths/schema/session.schema';
 
 

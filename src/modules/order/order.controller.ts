@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, ParseBoolPipe, ParseIntPipe, Post, Query } from '@nestjs/common';
-import { OrdersService } from './orders.service';
+import { OrderService } from './order.service';
 import { Protected, Roles, UserSession } from 'src/common/decorator';
 import { Role } from 'src/common/enums/roles.enum';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -8,22 +8,22 @@ import { UserHeaderRequest } from 'src/common/guards/jwt/jwt.guard';
 
 
 @Controller('orders')
-export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+export class OrderController {
+  constructor(private readonly orderService: OrderService) {}
 
 
   @Post()
   @Protected()
   @Roles( Role.ADMIN, Role.CUSTOMER )
   createOrder(@Body() createOrderDto: CreateOrderDto) {
-    return this.ordersService.create(createOrderDto);
+    return this.orderService.create(createOrderDto);
   }
 
 
   // Cần cơ chế chống spam
   @Post('/draft')
   createDraftOrder(@Body() createOrderDto: CreateOrderDto) {
-    return this.ordersService.createDraftOrder(createOrderDto);
+    return this.orderService.createDraftOrder(createOrderDto);
   }
 
   @Get('/drafts/:restaurantId')
@@ -36,7 +36,7 @@ export class OrdersController {
   ) {
     const targetUserId = isMyDrafts ? user.ATPayload.sub : undefined;
     
-    return this.ordersService.getListDraftOrders(restaurantId, targetUserId);
+    return this.orderService.getListDraftOrders(restaurantId, targetUserId);
   }
 
   @Post('/change-status')
@@ -44,7 +44,7 @@ export class OrdersController {
   @Roles( Role.ADMIN, Role.CUSTOMER )
   changeOrderStatus(@Body() changeOrderStatusDto: ChangeOrderStatusDto) {
     const { orderId, status } = changeOrderStatusDto;
-    return this.ordersService.changeOrderStatus(orderId, status);
+    return this.orderService.changeOrderStatus(orderId, status);
   }
   
   @Get('/user/:restaurantId')
@@ -54,7 +54,7 @@ export class OrdersController {
     @UserSession() user: UserHeaderRequest,
     @Param('restaurantId') restaurantId: string
   ) {
-    return this.ordersService.getOrdersForUser(restaurantId, user.ATPayload.sub);
+    return this.orderService.getOrdersForUser(restaurantId, user.ATPayload.sub);
   }
 
   @Get('/:restaurantId')
@@ -67,7 +67,7 @@ export class OrdersController {
     @Query('status') status?: any
   ) {
     console.log('Query Params:', { page, limit, status });
-    return this.ordersService.findOrdersByRestaurant(restaurantId, page, limit, { status: status });
+    return this.orderService.findOrdersByRestaurant(restaurantId, page, limit, { status: status });
   }
 
 
@@ -75,7 +75,7 @@ export class OrdersController {
   @Protected()
   @Roles( Role.ADMIN, Role.CUSTOMER )
   getOrderCheckoutDetails(@Param('orderId') orderId: string) {
-    return this.ordersService.getOrderCheckoutDetailsById(orderId);
+    return this.orderService.getOrderCheckoutDetailsById(orderId);
   }
 
 }

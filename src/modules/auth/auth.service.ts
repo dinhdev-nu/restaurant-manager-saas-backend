@@ -32,10 +32,8 @@ export type SessionOut = {
   user: UserDocument
 }
 
-
-
 @Injectable()
-export class AuthsService {
+export class AuthService {
 
   private readonly CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
   private readonly CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
