@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { UsersModule } from './modules/users/users.module';
 import { AuthsModule } from './modules/auths/auths.module';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ValidationPipeConfig } from './config/validation.config';
@@ -49,7 +48,7 @@ import { SseModule } from './modules/sse/sse.module';
     LoadConfigModule,
 
     SseModule,
-    UsersModule, AuthsModule,
+    AuthsModule,
     RestaurantsModule,
     OrdersModule,
     PaymentsModule,
