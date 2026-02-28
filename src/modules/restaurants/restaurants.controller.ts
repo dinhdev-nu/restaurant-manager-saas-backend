@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put} from '@nestjs/common';
 import { MenuItemsOut, RestaurantsService } from './restaurants.service';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { Roles } from 'src/common/decorator/roles.decorator';
@@ -26,11 +26,40 @@ export class RestaurantsController {
     return this.restaurantsService.create(session, createRestaurantDto);
   }
 
+  @Post("/:id/open")
+  @Protected()
+  @Roles( Role.CUSTOMER, Role.ADMIN )
+  openRestaurant(@Param("id") restaurantId: string) {
+    return this.restaurantsService.openOrCloseRestaurant(restaurantId, true);
+  }
+  @Post('/:id/close')
+  @Protected()
+  @Roles( Role.CUSTOMER, Role.ADMIN )
+  closeRestaurant(@Param("id") restaurantId: string) {
+    return this.restaurantsService.openOrCloseRestaurant(restaurantId, false);
+  }
+
+  @Put("/:id")
+  @Protected()
+  @Roles( Role.CUSTOMER, Role.ADMIN )
+  updateRestaurant(@Param("id") restaurantId: string, @Body() updateRestaurantDto: CreateRestaurantDto) {
+    return this.restaurantsService.updateRestaurant(restaurantId, updateRestaurantDto);
+  }
+
   @Get("my-restaurants")
   @Protected()
   @Roles( Role.CUSTOMER, Role.ADMIN )
   findMyRestaurants(@User() user: UserDocument) {
+    console.log("Finding restaurants for user ID:", user._id);
     return this.restaurantsService.getListRestaurantsByUserId(user._id);
+  }
+
+  @Get("/detail/:id")
+  @Protected()
+  @Roles( Role.CUSTOMER, Role.ADMIN, Role.USER )
+  getRestaurantDetails(@Param("id") restaurantId: string) {
+    console.log("Fetching details for restaurant ID:", restaurantId);
+    return this.restaurantsService.getRestaurantDetails(restaurantId);
   }
 
   // Menu Items

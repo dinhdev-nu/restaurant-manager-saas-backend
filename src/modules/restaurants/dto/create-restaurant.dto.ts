@@ -101,3 +101,5 @@ export class CreateRestaurantDto {
   specialties?: string;
   
 }
+
+export class UpdateRestaurantDto extends CreateRestaurantDto {}

@@ -15,7 +15,8 @@ import { UserHeaderRequest } from 'src/common/guards/jwt/jwt.guard';
 import { TABLE_NAME, TableDocument } from './schemas/table.schema';
 import { CreateTableDto } from './dto/create-table.dto';
 import { CreateStaffDto } from './dto/create-staff.dto';
-
+import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
+import { getTtlUntilEndOfDay } from 'src/common/utils/time.util';
 
 export interface MenuItemsOut {
   active: MenuItem[];
@@ -82,6 +83,75 @@ export class RestaurantsService {
     })
     
     return newRestaurant.toObject();
+  }
+
+  async updateRestaurant(restaurantId: string, updateRestaurantDto: UpdateRestaurantDto): Promise<RestaurantDocument>  {
+    if ( !Types.ObjectId.isValid(restaurantId) )
+      throw new BadRequestException('Invalid restaurant ID');
+
+    const objId = new Types.ObjectId(restaurantId);
+
+    const updatedRestaurant = await this.restaurantModel.findOneAndUpdate(
+      {
+        _id: objId,
+        isActive: true
+      },
+      { $set: updateRestaurantDto }, // Cần có whitelist trong validation các trường được update
+      { new: true } // Return the updated document
+    ).lean().exec();
+    if ( !updatedRestaurant )
+      throw new BadRequestException('Restaurant not found or inactive');
+
+    return updatedRestaurant;
+  }
+
+  async getRestaurantDetails(restaurantId: string): Promise<Restaurant & {  isOpen: Boolean }> {
+    if ( !Types.ObjectId.isValid(restaurantId) )
+      throw new BadRequestException('Invalid restaurant ID');
+
+    const objId = new Types.ObjectId(restaurantId);
+    const restaurant = await this.restaurantModel.findById(objId).lean().exec();
+    if ( !restaurant )
+      throw new BadRequestException('Restaurant not found');
+
+    // Check if restaurant is open
+    const isOpened = await this.redis.get(`restaurant_opened:${restaurantId}`);
+
+    return { ...restaurant , isOpen: !!isOpened };
+  }
+
+  async openOrCloseRestaurant(restaurantId: string, isOpen: boolean): Promise<Boolean> {
+    if ( !Types.ObjectId.isValid(restaurantId) )
+      throw new BadRequestException('Invalid restaurant ID');
+
+    const objId = new Types.ObjectId(restaurantId);
+
+    const isOpened = await this.redis.get(`restaurant_opened:${restaurantId}`);
+    if ( isOpen && isOpened ) return true
+    if ( !isOpen && !isOpened ) return true
+    if ( !isOpen && isOpened ) {
+      await this.redis.del(`restaurant_opened:${restaurantId}`);
+      return true;
+    }
+
+    const restaurant = await this.restaurantModel.findOne(
+      {
+        _id: objId,
+        isActive: true
+      }
+    ).lean().exec();
+    
+    if ( !restaurant )
+      throw new BadRequestException('Restaurant not found or inactive');
+
+    // Open to end of day, or until owner close
+    const ttl = getTtlUntilEndOfDay()
+    await this.redis.set(
+      `restaurant_opened:${restaurantId}`, 
+      JSON.stringify(restaurant)
+      , 'EX', ttl
+    );
+    return true;
   }
 
   async getListRestaurantsByUserId(userId: Types.ObjectId): Promise<Object | null> {
