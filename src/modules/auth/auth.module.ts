@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { AuthsService } from './auths.service';
-import { AuthsController } from './auths.controller';
+import { AuthService } from './auth.service';
+import { AuthController } from './auth.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UserSchema } from './schema/user.schema';
 import { SessionSchema } from './schema/session.schema';
@@ -18,9 +18,9 @@ import { MailModule } from '../mail/mail.module';
     MailModule
   ],
 
-  controllers: [AuthsController],
-  providers: [AuthsService],
-  exports: [AuthsService, JwtModule]
+  controllers: [AuthController],
+  providers: [AuthService],
+  exports: [AuthService, JwtModule]
 })
-export class AuthsModule {}
+export class AuthModule {}
    

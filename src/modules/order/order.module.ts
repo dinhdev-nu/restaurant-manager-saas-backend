@@ -1,14 +1,14 @@
 import { Module, Sse } from '@nestjs/common';
-import { OrdersService } from './orders.service';
-import { OrdersController } from './orders.controller';
+import { OrderService } from './order.service';
+import { OrderController } from './order.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { OrderSchema } from './schemas/order.schema';
-import { MenuItemSchema } from '../restaurants/schemas/menu-items.schema';
+import { MenuItemSchema } from '../restaurant/schemas/menu-items.schema';
 import { SseModule } from '../sse/sse.module';
 
 @Module({
-  controllers: [OrdersController],
-  providers: [OrdersService],
+  controllers: [OrderController],
+  providers: [OrderService],
   imports: [
     MongooseModule.forFeature([
       { name: "Order", schema: OrderSchema },
@@ -17,4 +17,4 @@ import { SseModule } from '../sse/sse.module';
     SseModule
   ]
 })
-export class OrdersModule {}
+export class OrderModule {}

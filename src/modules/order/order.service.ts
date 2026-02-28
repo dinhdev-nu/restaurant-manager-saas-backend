@@ -1,17 +1,17 @@
 import { InjectModel } from '@nestjs/mongoose';
 import { Order, OrderDocument, OrderStatus, OrderPaymentStatus } from './schemas/order.schema';
-import { Model, set, Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Body, Inject, Injectable } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { BadRequestException } from 'src/common/exceptions/http-exception';
-import { ITEMSTATUS, MenuItem, MenuItemDocument } from '../restaurants/schemas/menu-items.schema';
+import { ITEMSTATUS, MenuItem, MenuItemDocument } from '../restaurant/schemas/menu-items.schema';
 import { REDIS_CLIENT } from 'src/common/constants/redis.const';
 import Redis from 'ioredis';
 import { SseService } from '../sse/sse.service';
-import { Restaurant } from '../restaurants/schemas/restaurant.schema';
+import { Restaurant } from '../restaurant/schemas/restaurant.schema';
 
 @Injectable()
-export class OrdersService {
+export class OrderService {
 
   constructor( 
     private readonly sseService: SseService,

@@ -3,14 +3,14 @@ import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Payment, PaymentDocument, PaymentMethod, PaymentStatus } from './schemas/payment.schema';
 import { Connection, Model, Types } from 'mongoose';
 import { CreatePaymentByCashDto, CreatePaymentDto } from './dto/create-payment.dto';
-import { Order, OrderDocument, OrderStatus, OrderPaymentStatus } from '../orders/schemas/order.schema';
+import { Order, OrderDocument, OrderStatus, OrderPaymentStatus } from '../order/schemas/order.schema';
 import { BadRequestException } from 'src/common/exceptions/http-exception';
 import { SseService } from '../sse/sse.service';
 
 
 
 @Injectable()
-export class PaymentsService {
+export class PaymentService {
 
   constructor(
     private readonly sseService: SseService,

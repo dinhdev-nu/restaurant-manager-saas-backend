@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { AuthsModule } from './modules/auths/auths.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ValidationPipeConfig } from './config/validation.config';
 import { HTTP_ExceptionFilter } from './common/filters/exception.filter';
@@ -9,10 +9,10 @@ import { LoggerModule } from './common/logger/logger.module';
 import { RedisModule } from './databases/redis/redis.module';
 import { MongoModule } from './databases/mongo/mongo.module';
 import { LoadConfigModule } from './config/load-config.module';
-import { RestaurantsModule } from './modules/restaurants/restaurants.module';
-import { OrdersModule } from './modules/orders/orders.module'
+import { RestaurantModule } from './modules/restaurant/restaurant.module';
+import { OrderModule } from './modules/order/order.module'
 import { RolesGuard } from './common/guards/roles/roles.guard';
-import { PaymentsModule } from './modules/payments/payments.module';
+import { PaymentModule } from './modules/payment/payment.module';
 import { JwtGuard } from './common/guards/jwt/jwt.guard';
 import { SseModule } from './modules/sse/sse.module';
 
@@ -48,10 +48,10 @@ import { SseModule } from './modules/sse/sse.module';
     LoadConfigModule,
 
     SseModule,
-    AuthsModule,
-    RestaurantsModule,
-    OrdersModule,
-    PaymentsModule,
+    AuthModule,
+    RestaurantModule,
+    OrderModule,
+    PaymentModule,
 
     LoggerModule,
 
