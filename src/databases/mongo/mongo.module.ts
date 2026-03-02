@@ -1,14 +1,15 @@
 import { Global, Logger, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
-import { MONGO_URI } from 'src/common/constants/mongo.consts';
+import { AppConfigService } from 'src/config/config.service';
 
 @Global()
 @Module({
   imports: [
     MongooseModule.forRootAsync({
-      useFactory: async () => ({
-        uri: process.env.MONGO_URI || MONGO_URI,
+      inject: [AppConfigService],
+      useFactory: async (config: AppConfigService) => ({
+        uri: config.database.mongodbUri,
         connectionFactory: (connection: Connection) => {
 
           const logger = new Logger('MongoDB');

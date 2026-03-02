@@ -2,18 +2,22 @@ import { Injectable } from '@nestjs/common';
 import { readFileSync, existsSync } from 'fs';
 import * as nodemailer from "nodemailer"
 import * as path from 'path';
+import { AppConfigService } from 'src/config/config.service';
 
 @Injectable()
 export class MailService {
 
   private transporter: nodemailer.Transporter;
 
-  constructor() {
+  constructor(
+    private readonly config: AppConfigService
+  ) {
+
     this.transporter = nodemailer.createTransport({
-      service: process.env.SMTP_SERVICE,
+      service: this.config.mail.service,
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD,
+        user: this.config.mail.user,
+        pass: this.config.mail.pass,
       }
     })
   }
@@ -31,7 +35,7 @@ export class MailService {
 
     // Gửi email
     await this.transporter.sendMail({
-      from: process.env.SMTP_USER,
+      from: this.config.mail.user,
       to,
       subject,
       html

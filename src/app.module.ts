@@ -1,20 +1,20 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from './modules/auth/auth.module';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
-import { ValidationPipeConfig } from './config/validation.config';
+import { ValidationPipeConfig } from './common/configs/validation.config';
 import { HTTP_ExceptionFilter } from './common/filters/exception.filter';
 import { SuccessResponseInterceptor } from './common/interceptors/success-response.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { LoggerModule } from './common/logger/logger.module';
 import { RedisModule } from './databases/redis/redis.module';
 import { MongoModule } from './databases/mongo/mongo.module';
-import { LoadConfigModule } from './config/load-config.module';
 import { RestaurantModule } from './modules/restaurant/restaurant.module';
 import { OrderModule } from './modules/order/order.module'
 import { RolesGuard } from './common/guards/roles/roles.guard';
 import { PaymentModule } from './modules/payment/payment.module';
 import { JwtGuard } from './common/guards/jwt/jwt.guard';
 import { SseModule } from './modules/sse/sse.module';
+import { AppConfigModule } from './config/config.module';
 
 @Module({
   controllers: [],
@@ -45,7 +45,7 @@ import { SseModule } from './modules/sse/sse.module';
     }
   ],
   imports: [
-    LoadConfigModule,
+    AppConfigModule,
 
     SseModule,
     AuthModule,
