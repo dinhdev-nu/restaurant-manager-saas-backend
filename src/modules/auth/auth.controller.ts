@@ -7,17 +7,14 @@ import { UserSession } from 'src/common/decorator/session.decorator';
 import { UserHeaderRequest } from 'src/common/guards/jwt/jwt.guard';
 import { RefreshToken } from 'src/common/decorator/refreshToken.decorator';
 import { Protected } from 'src/common/decorator/protected.decorator';
-import { ConfigService } from '@nestjs/config';
+import { AppConfigService } from 'src/config/config.service';
 
 @Controller('auth')
 export class AuthController {
-  private nodeEnv: string;
   constructor(
     private readonly authService: AuthService,
-    private readonly configService: ConfigService
-  ) {
-    this.nodeEnv = this.configService.get<string>('server.nodeEnv') || 'development';
-  }
+    private readonly config: AppConfigService
+  ) {}
   
   @Post("/register")
   getUser(@Body() registerDto: RegisterDTO): Promise<string> {
@@ -47,7 +44,7 @@ export class AuthController {
     // Set HttpOnly cookies
     res.cookie('RT', data.refreshToken, {
       httpOnly: true,
-      secure: this.nodeEnv === 'production', // Set to true in production
+      secure: this.config.isProduction, // Set to true in production
       sameSite: 'lax', // cho phép khác domain
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     })
@@ -80,7 +77,7 @@ export class AuthController {
     const newSession = await this.authService.refreshToken(rfCookies);
     res.cookie('RT', newSession.refreshToken, {
       httpOnly: true,
-      secure: this.nodeEnv === 'production', // Set to true in production
+      secure: this.config.isProduction, // Set to true in production
       sameSite: 'lax', // cho phép khác domain // Cùng domain
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
@@ -102,14 +99,14 @@ export class AuthController {
     // SetCookies 
     res.cookie('RT', session.refreshToken, {
       httpOnly: true,
-      secure: this.nodeEnv === 'production', // Set to true in production
+      secure: this.config.isProduction  , // Set to true in production
       sameSite: 'lax', // cho phép khác domain
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     })
     session.refreshToken = "";
     res.cookie('SS', JSON.stringify(session), {
       httpOnly: false,
-      secure: this.nodeEnv === 'production',
+      secure: this.config.isProduction,
       sameSite: 'lax',
       maxAge: 60 * 1000
     });

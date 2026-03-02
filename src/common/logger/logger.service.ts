@@ -2,6 +2,7 @@
 import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
+import { AppConfigService } from 'src/config/config.service';
 
 @Injectable()
 export class LoggerService {
@@ -9,10 +10,12 @@ export class LoggerService {
   private readonly logMaxSizeMB: number;
   private readonly logFileNamePattern: string;
 
-  constructor() {
-    this.logDir = process.env.LOG_DIR || 'logs';
-    this.logMaxSizeMB = parseInt(process.env.LOG_MAX_SIZE || '5') || 5;
-    this.logFileNamePattern = process.env.LOG_FILE_NAME || 'log_xxx.log';
+  constructor(
+    private readonly config: AppConfigService
+  ) {
+    this.logDir = this.config.log.dir;
+    this.logMaxSizeMB = this.config.log.maxSize;
+    this.logFileNamePattern = this.config.log.fileName;
 
     if (!fs.existsSync(this.logDir)) {
       fs.mkdirSync(this.logDir, { recursive: true });

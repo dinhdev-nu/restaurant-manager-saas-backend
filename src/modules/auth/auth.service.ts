@@ -8,22 +8,19 @@ import { User, UserDocument } from './schema/user.schema';
 import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { ComparePassword, GenerateSalt, HashPassword } from 'src/common/utils/auth.util';
-import { Session } from 'inspector/promises';
-import { SessionDocument } from './schema/session.schema';
+import { Session, SessionDocument } from './schema/session.schema';
 import { JwtService } from '@nestjs/jwt';
 import { MailService } from '../mail/mail.service';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
-import { UserHeaderRequest } from 'src/common/guards/jwt/jwt.guard';
+import { JWTPayloadAT, JWTPayloadRT, UserHeaderRequest } from './auth.types';
 
+export type { JWTPayloadAT, JWTPayloadRT, UserHeaderRequest };
 
 type OTPCache = {
   OTP: string;
   FailCount: number
 }
-
-export type JWTPayloadAT = { sid: string, sub: string, roles: string[] }
-export type JWTPayloadRT = { sid: string, sub: string, version: number, jti: string, roles?: string[] }
 
 
 export type SessionOut = { 

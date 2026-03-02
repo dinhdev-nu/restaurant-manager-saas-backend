@@ -6,6 +6,7 @@ import { CreatePaymentByCashDto, CreatePaymentDto } from './dto/create-payment.d
 import { Order, OrderDocument, OrderStatus, OrderPaymentStatus } from '../order/schemas/order.schema';
 import { BadRequestException } from 'src/common/exceptions/http-exception';
 import { SseService } from '../sse/sse.service';
+import { AppConfigService } from 'src/config/config.service';
 
 
 
@@ -14,6 +15,7 @@ export class PaymentService {
 
   constructor(
     private readonly sseService: SseService,
+    private readonly config: AppConfigService,
     @InjectModel(Payment.name) private readonly paymentModel: Model<PaymentDocument>,
     @InjectModel(Order.name) private readonly orderModel: Model<OrderDocument>,
     @InjectConnection() private readonly connection: Connection // Inject the Mongoose connection
@@ -110,9 +112,9 @@ export class PaymentService {
     }
 
     // Generate QE code 
-    const bankId = process.env.BANK_ID;
-    const accountNo = process.env.ACCOUNT_NO;
-    const template = process.env.TEMPLATE;
+    const bankId = this.config.client.bankId;
+    const accountNo = this.config.client.accountNo;
+    const template = this.config.client.template;
     const amount = order.total;
     const description = `PM${payment._id.toString()}`;
     const qr_url = 
