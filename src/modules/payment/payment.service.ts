@@ -4,9 +4,11 @@ import { Payment, PaymentDocument, PaymentMethod, PaymentStatus } from './schema
 import { Connection, Model, Types } from 'mongoose';
 import { CreatePaymentByCashDto, CreatePaymentDto } from './dto/create-payment.dto';
 import { Order, OrderDocument, OrderStatus, OrderPaymentStatus } from '../order/schemas/order.schema';
-import { BadRequestException } from 'src/common/exceptions/http-exception';
 import { SseService } from '../sse/sse.service';
 import { AppConfigService } from 'src/config/config.service';
+import { BadRequestException, ConflictException, NotFoundException } from 'src/common/exceptions';
+import { ERROR_CODE } from 'src/common/constants/error-code.constant';
+import { InternalServerException } from 'src/common/exceptions/http/internal-server.exception';
 
 
 
@@ -21,32 +23,32 @@ export class PaymentService {
     @InjectConnection() private readonly connection: Connection // Inject the Mongoose connection
   ) {}
 
-  async paymentByCash(createPaymentDto: CreatePaymentByCashDto, restaurantId: string): Promise<Payment> {
+  async paymentByCash(dto: CreatePaymentByCashDto, restaurantId: Types.ObjectId): Promise<Payment> {
     const session = await this.connection.startSession()
     session.startTransaction();
     console.log('Starting payment by cash transaction...');
     let order: OrderDocument | null = null;
     try {
-      const { paidAmount } = createPaymentDto; 
+      const { paidAmount } = dto; 
       
       // Kiểm tra đơn hàng
       order = await this.orderModel.findOne({
-        _id: new Types.ObjectId(createPaymentDto.orderId),
-        restaurantId: new Types.ObjectId(restaurantId),
+        _id: dto.orderId,
+        restaurantId: restaurantId,
       }).session(session);
-      if (!order) throw new BadRequestException('Order not found');
+      if (!order) throw new NotFoundException(Order.name, dto.orderId);
       if (order.status === OrderStatus.CANCELLED)
-        throw new BadRequestException('Order has been cancelled');
+        throw new ConflictException(ERROR_CODE.CONFLICT_INPUT_ERROR, 'Order has been cancelled');
       if (order.paymentStatus === OrderPaymentStatus.PAID) 
-        throw new BadRequestException('Order has been paid');
+        throw new ConflictException(ERROR_CODE.CONFLICT_INPUT_ERROR, 'Order has been paid');
       if ( paidAmount < order.total)
-        throw new BadRequestException('Paid amount is less than order total');
+        throw new BadRequestException(ERROR_CODE.INVALID_INPUT_ERROR, 'Paid amount is less than order total');
 
       // Tạo bản ghi thanh toán
       const changeAmount = paidAmount - order.total;
       const payment = await this.paymentModel.create([{
         orderId: order._id,
-        restaurantId: new Types.ObjectId(restaurantId),
+        restaurantId: restaurantId,
 
         orderAmount: order.total,
         paidAmount,
@@ -67,7 +69,7 @@ export class PaymentService {
     } catch (error) {
       await session.abortTransaction();
       console.error('Payment by cash failed:', error);
-      throw new BadRequestException("Payment failed! Please try again.");
+      throw new InternalServerException(ERROR_CODE.TRANSACTION_ERROR, "Payment failed! Please try again.");
     } finally {
       await session.endSession();
 
@@ -82,25 +84,25 @@ export class PaymentService {
     }
   }
 
-  async paymentByQrCode(createPaymentDto: CreatePaymentDto, restaurantId: string): Promise<any & { qr_url: string }> {
+  async paymentByQrCode(dto: CreatePaymentDto, restaurantId: Types.ObjectId): Promise<any & { qr_url: string }> {
     
     // Kiểm tra đơn hàng
     const order = await this.orderModel.findOne({
-      _id: new Types.ObjectId(createPaymentDto.orderId),
-      restaurantId: new Types.ObjectId(restaurantId),
+      _id: dto.orderId,
+      restaurantId: restaurantId,
     }).lean();
-    if (!order) throw new BadRequestException('Order not found');
+    if (!order) throw new NotFoundException(Order.name, dto.orderId);
     if (order.status === OrderStatus.CANCELLED)
-      throw new BadRequestException('Order has been cancelled');
+      throw new ConflictException(ERROR_CODE.CONFLICT_INPUT_ERROR, 'Order has been cancelled');
     if (order.paymentStatus === OrderPaymentStatus.PAID) 
-      throw new BadRequestException('Order has been paid');
-    if (createPaymentDto.amount !== order.total)
-      throw new BadRequestException('Payment amount does not match order total');
+      throw new ConflictException(ERROR_CODE.CONFLICT_INPUT_ERROR, 'Order has been paid');
+    if (dto.amount !== order.total)
+      throw new BadRequestException(ERROR_CODE.INVALID_INPUT_ERROR, 'Payment amount does not match order total');
 
     // Tạo bản ghi thanh toán
     // const payment = await this.paymentModel.create({
     //   orderId: order._id,
-    //   restaurantId: new Types.ObjectId(restaurantId),
+    //   restaurantId: restaurantId,
     //   orderAmount: order.total,
     //   paidAmount: 0,  // Chưa thanh toán
     //   changeAmount: 0, // Chưa thanh toán

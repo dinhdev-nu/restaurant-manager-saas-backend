@@ -2,12 +2,9 @@ import { Body, Controller, Get, Post, Query, Req, Res } from '@nestjs/common';
 import { AuthService, JWTPayloadAT } from './auth.service';
 import { LoginDto, RegisterDTO, SignupDTO, VerifyOtpDTO } from './dto/auth.dto';
 import { Request, Response } from 'express';
-import { UnauthorizedException } from 'src/common/exceptions/http-exception';
-import { UserSession } from 'src/common/decorator/session.decorator';
-import { UserHeaderRequest } from 'src/common/guards/jwt/jwt.guard';
-import { RefreshToken } from 'src/common/decorator/refreshToken.decorator';
-import { Protected } from 'src/common/decorator/protected.decorator';
 import { AppConfigService } from 'src/config/config.service';
+import { CurrentUser, Public } from 'src/common/decorators';
+import { Cookie } from 'src/common/decorators';
 
 @Controller('auth')
 export class AuthController {
@@ -16,29 +13,34 @@ export class AuthController {
     private readonly config: AppConfigService
   ) {}
   
+  @Public()
   @Post("/register")
-  getUser(@Body() registerDto: RegisterDTO): Promise<string> {
-    return this.authService.register(registerDto)
+  getUser(@Body() dto: RegisterDTO): Promise<string> {
+    return this.authService.register(dto)
   }
 
+  @Public()
   @Post("/send-otp")
-  sendOtp(@Body() registerDto: RegisterDTO): Promise<boolean> {
-    return this.authService.sendOtp(registerDto)
+  sendOtp(@Body() dto: RegisterDTO): Promise<boolean> {
+    return this.authService.sendOtp(dto)
   }
 
+  @Public()
   @Post("/verify-otp")
-  verifyOtp(@Body() verifyOtpDto: VerifyOtpDTO): Promise<boolean> {
-    return this.authService.verifyOtp(verifyOtpDto)
+  verifyOtp(@Body() dto: VerifyOtpDTO): Promise<boolean> {
+    return this.authService.verifyOtp(dto)
   }
 
+  @Public()
   @Post("/signup")
-  signup(@Body() signupDto: SignupDTO): Promise<Boolean> {
-    return this.authService.signup(signupDto)
+  signup(@Body() dto: SignupDTO): Promise<Boolean> {
+    return this.authService.signup(dto)
   }
 
+  @Public()
   @Post("/login")
-  async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response): Promise<any> {
-    const loginPayload = { ...loginDto, ip: loginDto.ip || (res.req as Request).ip } as LoginDto;
+  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response): Promise<any> {
+    const loginPayload = { ...dto, ip: dto.ip || (res.req as Request).ip } as LoginDto;
     const data = await this.authService.login(loginPayload);
 
     // Set HttpOnly cookies
@@ -56,25 +58,21 @@ export class AuthController {
   }
 
   @Post("/logout")
-  @Protected()
-  logout(@UserSession() user: UserHeaderRequest, @Res({ passthrough: true }) res: Response): Promise<boolean> {
-    const payload = user.ATPayload as JWTPayloadAT;
+  logout(@CurrentUser('PAYLOAD') payload: JWTPayloadAT, @Res({ passthrough: true }) res: Response): Promise<boolean> {
     res.clearCookie('RT');
     return this.authService.logout(payload.sub, payload.sid);
   }
 
   @Post("/revoke-sessions")
-  @Protected()
-  revokeSessions(@UserSession() user: UserHeaderRequest, @Res({ passthrough: true }) res: Response): Promise<boolean> {
-    const payload = user.ATPayload as JWTPayloadAT;
+  revokeSessions(@CurrentUser('PAYLOAD') payload: JWTPayloadAT, @Res({ passthrough: true }) res: Response): Promise<boolean> {
     res.clearCookie('RT');
     return this.authService.revokeUserSessions(payload.sub);
   }
 
+  @Public()
   @Post("/refresh")
-  async refresh(@RefreshToken() rfCookies: string, @Res({ passthrough: true }) res: Response): Promise<{ accessToken: string }> {
-    if (!rfCookies) throw new UnauthorizedException("Missing refresh token");
-    const newSession = await this.authService.refreshToken(rfCookies);
+  async refresh(@Cookie('REFRESH_TOKEN') token: string, @Res({ passthrough: true }) res: Response): Promise<{ accessToken: string }> {
+    const newSession = await this.authService.refreshToken(token);
     res.cookie('RT', newSession.refreshToken, {
       httpOnly: true,
       secure: this.config.isProduction, // Set to true in production
@@ -85,12 +83,14 @@ export class AuthController {
     return { accessToken: newSession.accessToken };
   }
 
+  @Public()
   @Get("/google")
   async googleAuth(@Res() res: Response) {
     const url = this.authService.getGoogleAuthUrl();
     return res.redirect(url);
   }
 
+  @Public()
   @Get("/google/callback")
   async googleAuthCallback(@Query('code') code: string,@Req() req: Request, @Res() res: Response) {
 

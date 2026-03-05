@@ -1,7 +1,7 @@
 import { IsDate, IsEmail, IsEnum, IsMongoId, IsNumber, IsOptional, IsPhoneNumber, IsString, Min } from "class-validator";
-import { RestaurantRolesArray } from "src/common/enums/roles.enum";
 import { Shift } from "../schemas/staff.schema";
 import { Type } from "class-transformer";
+import { ROLE, Role, ROLE_LIST } from "src/common/constants/role.constant";
 
 
 export class CreateStaffDto {
@@ -30,8 +30,8 @@ export class CreateStaffDto {
     @IsString()
     avatar?: string;
 
-    @IsEnum(RestaurantRolesArray, { message: 'Vai trò nhân viên không hợp lệ' })
-    role: string;
+    @IsEnum(ROLE_LIST, { message: 'Vai trò nhân viên không hợp lệ' })
+    role: Role;
 
     @IsEnum(Shift, { message: 'Ca làm việc không hợp lệ' })
     shift: Shift;

@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { HydratedDocument, Types } from "mongoose";
-import { RestaurantRole, RestaurantRolesArray } from "src/common/enums/roles.enum";
+import { RESTAURANT_ROLE, RESTAURANT_ROLE_LIST, RestaurantRole } from "src/common/constants/restaurant-role.constant";
 
 export type StaffDocument = HydratedDocument<Staff>;
 
@@ -39,8 +39,8 @@ export class Staff {
     @Prop({ required: true })
     phone: string
 
-    @Prop({ enum: RestaurantRolesArray, required: true, default: RestaurantRole.WAITER })
-    role: string
+    @Prop({ type: String, enum: RESTAURANT_ROLE_LIST, required: true })
+    role: RestaurantRole
 
     @Prop({ enum: Shift, required: true, default: Shift.FULLTIME })
     shift: string
