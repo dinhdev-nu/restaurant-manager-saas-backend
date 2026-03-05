@@ -1,9 +1,9 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { HydratedDocument, Types } from "mongoose";
+import { Role, ROLE, ROLE_LIST } from "src/common/constants/role.constant";
 
 export type UserDocument = HydratedDocument<User>;
-
-const USER_ROLES = ["admin", "user", "customer"];
+;
 const PROVIDER = ["local", "google", "facebook"];
 
 @Schema()
@@ -37,8 +37,8 @@ export class User {
     @Prop({ default: true })
     isActive: boolean;
 
-    @Prop({ type: [String], enum: USER_ROLES, default: ["user"] })
-    roles: string[];
+    @Prop({ type: String, enum: ROLE_LIST, default: ROLE.USER })
+    role: Role;
 
     @Prop({ type: [Provider], default: [{ name: "local", providerId: "" }] })
     providers: Provider[];

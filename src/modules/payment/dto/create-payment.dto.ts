@@ -1,13 +1,17 @@
 import { IsEnum, IsMongoId, IsNumber, IsString, Min } from "class-validator";
 import { PaymentMethod } from "../schemas/payment.schema";
+import { Types } from "mongoose";
+import { Type } from "class-transformer";
 
 export class CreatePaymentByCashDto {
 
     @IsMongoId()
-    restaurantId: string;
+    @Type(() => Types.ObjectId)
+    restaurantId: Types.ObjectId;
 
     @IsMongoId()
-    orderId: string;
+    @Type(() => Types.ObjectId)
+    orderId: Types.ObjectId;
 
     @IsNumber()
     @Min(0)
@@ -21,10 +25,12 @@ export class CreatePaymentByCashDto {
 export class CreatePaymentDto {
 
     @IsMongoId()
-    restaurantId: string;
+    @Type(() => Types.ObjectId)
+    restaurantId: Types.ObjectId;
 
     @IsMongoId()
-    orderId: string;
+    @Type(() => Types.ObjectId)
+    orderId: Types.ObjectId;
 
     @IsNumber()
     @Min(0)

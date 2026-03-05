@@ -3,12 +3,13 @@ import { Order, OrderDocument, OrderStatus, OrderPaymentStatus } from './schemas
 import { Model, Types } from 'mongoose';
 import { Body, Inject, Injectable } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { BadRequestException } from 'src/common/exceptions/http-exception';
 import { ITEMSTATUS, MenuItem, MenuItemDocument } from '../restaurant/schemas/menu-items.schema';
-import { REDIS_CLIENT } from 'src/common/constants/redis.const';
 import Redis from 'ioredis';
 import { SseService } from '../sse/sse.service';
 import { Restaurant } from '../restaurant/schemas/restaurant.schema';
+import { INJECTION_TOKEN } from 'src/common/constants/injection-token.constant';
+import { BadRequestException, ConflictException, NotFoundException } from 'src/common/exceptions';
+import { ERROR_CODE } from 'src/common/constants/error-code.constant';
 
 @Injectable()
 export class OrderService {
@@ -17,17 +18,17 @@ export class OrderService {
     private readonly sseService: SseService,
     @InjectModel(Order.name) private readonly orderModel: Model<OrderDocument>,
     @InjectModel(MenuItem.name) private readonly menuItemModel: Model<MenuItemDocument>,
-    @Inject(REDIS_CLIENT) private readonly redis: Redis
+    @Inject(INJECTION_TOKEN.REDIS_CLIENT) private readonly redis: Redis
   ) {}
 
-  async create(@Body() createOrderDto: CreateOrderDto): Promise<Order> {
-    const { restaurantId, items, staffId, total, tax, discount } = createOrderDto
-    console.log('Creating order with data:', createOrderDto);
+  async create(@Body() dto: CreateOrderDto): Promise<Order> {
+    const { restaurantId, items, staffId, total, tax, discount } = dto
+
     // Check dulicate items
     const itemIds = items.map(item => item.itemId);
     const uniqueItemIds = new Set(itemIds);
     if ( uniqueItemIds.size !== items.length)
-      throw new BadRequestException('Duplicate items in order');
+      throw new BadRequestException(ERROR_CODE.DUPLICATE_ITEMS, 'Duplicate items in order');
 
     // Check staff (optional)
     if ( staffId ) {}
@@ -45,40 +46,38 @@ export class OrderService {
     ).select(select).lean().exec();
 
     if ( menuItems.length !== items.length )
-      throw new BadRequestException('Invalid menu items');
+      throw new NotFoundException(MenuItem.name, 'One or more items not found');
 
     // Calculate Total Amount
     let totalAmount = 0;
 
     for ( const menuItem of menuItems) {
-      const orderItem = items.find(i => i.itemId === menuItem._id.toString())
+      const orderItem = items.find(i => i.itemId === menuItem._id)
       
       if ( !orderItem )
-        throw new BadRequestException('Invalid item request');
-      if ( orderItem.quantity < 1 )
-        throw new BadRequestException('Invalid item quantity for ' + menuItem.name);
+        throw new NotFoundException(MenuItem.name, 'Invalid item request');
       if ( orderItem.quantity > menuItem.stock_quantity || menuItem.status === ITEMSTATUS.UNAVAILABLE )
-        throw new BadRequestException('Insufficient stock for ' + menuItem.name);
+        throw new ConflictException(ERROR_CODE.INSUFFICIENT_STOCK, 'Insufficient stock for ' + menuItem.name);
       if ( orderItem.price !== menuItem.price )
-        throw new BadRequestException('Invalid price for ' + menuItem.name);
+        throw new ConflictException(ERROR_CODE.CONFLICT_INPUT_ERROR, 'Invalid price for ' + menuItem.name);
 
       totalAmount += menuItem.price * orderItem.quantity;
     }
     totalAmount = totalAmount + tax - discount;
     
     if ( totalAmount !== total )
-      throw new BadRequestException('Invalid total amount');
+      throw new ConflictException(ERROR_CODE.CONFLICT_INPUT_ERROR, 'Invalid total amount');
 
     // Transact stock update
     // BulkWrite for stock update
 
     // save order with pending status
-    const orderData = await this.validateOrderFromUser(createOrderDto);
+    const orderData = await this.validateOrderFromUser(dto);
     const newOrder = await this.orderModel.create(orderData);
 
-    if ( createOrderDto.customer?.customerId ) {
+    if ( dto.customer?.customerId ) {
       this.sseService.sendEventToUser({ 
-        userId: createOrderDto.customer.customerId,
+        userId: dto.customer.customerId.toString() || '', // Đảm bảo userId là string
         type: 'new_order_confirmed',
         data: newOrder.toObject()
       })
@@ -90,18 +89,18 @@ export class OrderService {
 
   async validateOrderFromUser(dto: CreateOrderDto): Promise<OrderDocument> {
     const orderData = {
-      restaurantId: new Types.ObjectId(dto.restaurantId),
-      staffId: dto.staffId ? new Types.ObjectId(dto.staffId) : undefined,
+      restaurantId: dto.restaurantId,
+      staffId: dto.staffId ? dto.staffId : undefined,
       status: OrderStatus.PENDING,
       table: dto.table,
       staff: dto.staff,
       customer: dto.customer ? {
-        customerId: dto.customer.customerId ? new Types.ObjectId(dto.customer.customerId) : undefined,
+        customerId: dto.customer.customerId ? dto.customer.customerId : undefined,
         name: dto.customer.name,
         contact: dto.customer.contact
       } : undefined,
       items: dto.items.map(item => ({
-        itemId: new Types.ObjectId(item.itemId),
+        itemId: item.itemId,
         name: item.name,
         quantity: item.quantity,
         price: item.price,
@@ -114,27 +113,24 @@ export class OrderService {
     } as OrderDocument;
 
     if ( orderData.customer?.customerId ) {
-      if ( !Types.ObjectId.isValid(dto._id || "") ){
-        throw new BadRequestException('orderId should not be provided or must be a valid ObjectId');
-      }
       const orderCache = await this.redis.get(`draft_order:${dto.restaurantId}:${dto._id}`);
       if ( !orderCache ) {
-        throw new BadRequestException('Draft order not found');
+        throw new NotFoundException(Order.name, dto._id || 'unknown');
       }
-      orderData._id = new Types.ObjectId(dto._id);
+      orderData._id = dto._id || new Types.ObjectId();
       orderData.status = OrderStatus.PROGRESS
     }
 
     return orderData;
   }
 
-  async createDraftOrder(createOrderDto: CreateOrderDto): Promise<Order & { expiredAt: Date }> {
-    const { restaurantId, items, staffId, total, tax, discount } = createOrderDto
+  async createDraftOrder(dto: CreateOrderDto): Promise<Order & { expiredAt: Date }> {
+    const { restaurantId, items, staffId, total, tax, discount } = dto;
 
     // Check restaurant open status
     const restaurantData = await this.redis.get(`restaurant_opened:${restaurantId}`);
     if ( !restaurantData )
-      throw new BadRequestException('Restaurant is closed');
+      throw new NotFoundException(Restaurant.name, 'Restaurant is closed');
 
     const restaurant = JSON.parse(restaurantData) as Restaurant;
     const { ownerId } = restaurant;
@@ -143,7 +139,7 @@ export class OrderService {
     const itemIds = items.map(item => item.itemId);
     const uniqueItemIds = new Set(itemIds);
     if ( uniqueItemIds.size !== items.length)
-      throw new BadRequestException('Duplicate items in order');
+      throw new BadRequestException(ERROR_CODE.DUPLICATE_ITEMS, 'Duplicate items in order');
 
     // Check staff (optional)
     if ( staffId ) {}
@@ -161,35 +157,34 @@ export class OrderService {
     ).select(select).lean().exec();
 
     if ( menuItems.length !== items.length )
-      throw new BadRequestException('Invalid menu items');
+      throw new NotFoundException(MenuItem.name, 'One or more items not found');
 
     // Calculate Total Amount
     let totalAmount = 0;
 
     for ( const menuItem of menuItems) {
-      const orderItem = items.find(i => i.itemId === menuItem._id.toString())
+      const orderItem = items.find(i => i.itemId === menuItem._id)
       
       if ( !orderItem )
-        throw new BadRequestException('Invalid item request');
-      if ( orderItem.quantity < 1 )
-        throw new BadRequestException('Invalid item quantity for ' + menuItem.name);
+        throw new NotFoundException(MenuItem.name, 'Invalid item request');
       if ( orderItem.quantity > menuItem.stock_quantity || menuItem.status === ITEMSTATUS.UNAVAILABLE )
-        throw new BadRequestException('Insufficient stock for ' + menuItem.name);
+        throw new ConflictException(ERROR_CODE.INSUFFICIENT_STOCK, 'Insufficient stock for ' + menuItem.name);
       if ( orderItem.price !== menuItem.price )
-        throw new BadRequestException('Invalid price for ' + menuItem.name);
+        throw new ConflictException(ERROR_CODE.CONFLICT_INPUT_ERROR, 'Invalid price for ' + menuItem.name);
 
       totalAmount += menuItem.price * orderItem.quantity;
     }
     totalAmount = totalAmount + tax - discount;
     
     if ( totalAmount !== total )
-      throw new BadRequestException('Invalid total amount');
+      throw new ConflictException(ERROR_CODE.CONFLICT_INPUT_ERROR, 'Invalid total amount');
+
 
     // create a document without saving to MongoDB
     const newOrder = new this.orderModel({
-      ...createOrderDto,
-      restaurantId: new Types.ObjectId(restaurantId),
-      staffId: staffId ? new Types.ObjectId(staffId) : undefined,
+      ...dto,
+      restaurantId: restaurantId,
+      staffId: staffId,
       status: OrderStatus.PENDING
     })
 
@@ -206,7 +201,7 @@ export class OrderService {
     return { ...newOrder.toObject(), expiredAt: orderExpiredAt };
   }
 
-  async saveDaftOrderToDB(order: OrderDocument, restaurantId: string): Promise<Date>{
+  async saveDaftOrderToDB(order: OrderDocument, restaurantId: Types.ObjectId): Promise<Date>{
     const ttl = 3600
     const expiredAt = Math.floor(Date.now() / 1000) + ttl;
     const orderExpiredAt = new Date(expiredAt * 1000);
@@ -223,15 +218,15 @@ export class OrderService {
     return orderExpiredAt;
   }
 
-  async getOrdersForUser(restaurantId: string, userId: string): Promise<any>  {
+  async getOrdersForUser(restaurantId: Types.ObjectId, userId: Types.ObjectId): Promise<any>  {
     const now = new Date()
     now.setHours(0, 0, 0, 0); 
     console.log('Getting orders for user:', { restaurantId, userId, date: now });
     const [orders, draftOrders] = await Promise.all([
       this.orderModel.find({
-        restaurantId: new Types.ObjectId(restaurantId),
+        restaurantId: restaurantId,
         createdAt: { $gte: now },
-        'customer.customerId': new Types.ObjectId(userId)
+        'customer.customerId': userId
       }).lean().exec(),
       this.getListDraftOrders(restaurantId, userId)
     ])
@@ -239,7 +234,7 @@ export class OrderService {
     return { orders, draftOrders };
   }
 
-  async getListDraftOrders(restaurantId: string, userId?: string): Promise<Order[]> {
+  async getListDraftOrders(restaurantId: Types.ObjectId, userId?: Types.ObjectId): Promise<Order[]> {
     
     const now = Math.floor(Date.now() / 1000);
     const indexKey = `draft_orders:${restaurantId}`;
@@ -265,7 +260,7 @@ export class OrderService {
     if (userId) {
       return draftOrders.filter(order => order.customer 
         && order.customer.customerId
-        && order.customer.customerId.toString() === userId
+        && order.customer.customerId === userId
       )
     }
 
@@ -273,14 +268,14 @@ export class OrderService {
   }
 
   async findOrdersByRestaurant(
-    restaurantId: string,
+    restaurantId: Types.ObjectId,
     page: number = 1, 
     limit: number = 20,
     fillter?: { 
       status?: OrderStatus 
     }
   ): Promise<Order[]> {
-    const query: any = { restaurantId: new Types.ObjectId(restaurantId) };
+    const query: any = { restaurantId };
     if (fillter?.status) {
       query.status = fillter.status;
     }
@@ -298,18 +293,13 @@ export class OrderService {
   }
 
 
-  async getOrderCheckoutDetailsById(orderId: string): Promise<Order> {
+  async getOrderCheckoutDetailsById(orderId: Types.ObjectId): Promise<Order> {
 
-    // Validate OrderId
-    if (!Types.ObjectId.isValid(orderId)) {
-      throw new BadRequestException('Invalid order ID');
-    }
-
-    const order = await this.orderModel.findById(new Types.ObjectId(orderId));
+    const order = await this.orderModel.findById(orderId);
     if ( !order )
-      throw new BadRequestException('Order not found');
+      throw new NotFoundException(Order.name, orderId);
     if ( order.paymentStatus !== OrderPaymentStatus.UNPAID)
-      throw new BadRequestException('Order already paid');
+      throw new ConflictException(ERROR_CODE.CONFLICT_INPUT_ERROR, 'Order already paid');
 
     // Check Amount
 
@@ -317,10 +307,10 @@ export class OrderService {
   }
 
 
-  async changeOrderStatus(orderId: string, status: OrderStatus): Promise<Order> {
-    const order = await this.orderModel.findById(new Types.ObjectId(orderId));
+  async changeOrderStatus(orderId: Types.ObjectId, status: OrderStatus): Promise<Order> {
+    const order = await this.orderModel.findById(orderId);
     if ( !order )
-      throw new BadRequestException('Order not found');
+      throw new NotFoundException(Order.name, orderId);
 
     order.status = status;
     await order.save()

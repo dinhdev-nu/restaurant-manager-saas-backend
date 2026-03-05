@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Param, ParseBoolPipe, ParseIntPipe, Post, Query } from '@nestjs/common';
+import { Body, Controller, DefaultValuePipe, Get, Param, ParseBoolPipe, ParseIntPipe, Post, Query } from '@nestjs/common';
 import { OrderService } from './order.service';
-import { Protected, Roles, UserSession } from 'src/common/decorator';
-import { Role } from 'src/common/enums/roles.enum';
+import { CurrentUser, Roles } from 'src/common/decorators';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ChangeOrderStatusDto } from './dto/change-order-status.dto';
-import { UserHeaderRequest } from 'src/common/guards/jwt/jwt.guard';
+import { ParseObjectIdPipe } from '@nestjs/mongoose';
+import { Types } from 'mongoose';
+import { ROLE } from 'src/common/constants/role.constant';
 
 
 @Controller('orders')
@@ -13,57 +14,52 @@ export class OrderController {
 
 
   @Post()
-  @Protected()
-  @Roles( Role.ADMIN, Role.CUSTOMER )
-  createOrder(@Body() createOrderDto: CreateOrderDto) {
-    return this.orderService.create(createOrderDto);
+  @Roles( ROLE.ADMIN, ROLE.USER )
+  createOrder(@Body() dto: CreateOrderDto) {
+    return this.orderService.create(dto);
   }
 
 
   // Cần cơ chế chống spam
   @Post('/draft')
-  createDraftOrder(@Body() createOrderDto: CreateOrderDto) {
-    return this.orderService.createDraftOrder(createOrderDto);
+  createDraftOrder(@Body() dto: CreateOrderDto) {
+    return this.orderService.createDraftOrder(dto);
   }
 
   @Get('/drafts/:restaurantId')
-  @Protected()
-  @Roles(Role.ADMIN, Role.CUSTOMER)
+  @Roles(ROLE.ADMIN, ROLE.USER)
   getDraftOrders(
-    @UserSession() user: UserHeaderRequest,
-    @Param('restaurantId') restaurantId: string, 
+    @CurrentUser('ID') userId: Types.ObjectId,
+    @Param('restaurantId', ParseObjectIdPipe) restaurantId: Types.ObjectId, 
     @Query('isMyDrafts', new ParseBoolPipe({ optional: true })) isMyDrafts?: boolean
   ) {
-    const targetUserId = isMyDrafts ? user.ATPayload.sub : undefined;
+    const targetUserId = isMyDrafts ? userId : undefined;
     
     return this.orderService.getListDraftOrders(restaurantId, targetUserId);
   }
 
   @Post('/change-status')
-  @Protected()
-  @Roles( Role.ADMIN, Role.CUSTOMER )
-  changeOrderStatus(@Body() changeOrderStatusDto: ChangeOrderStatusDto) {
-    const { orderId, status } = changeOrderStatusDto;
+  @Roles(ROLE.ADMIN, ROLE.USER)
+  changeOrderStatus(@Body() dto: ChangeOrderStatusDto) {
+    const { orderId, status } = dto;
     return this.orderService.changeOrderStatus(orderId, status);
   }
   
   @Get('/user/:restaurantId')
-  @Protected()
-  @Roles( Role.ADMIN, Role.CUSTOMER )
+  @Roles(ROLE.ADMIN, ROLE.USER)
   getOrdersForUser(
-    @UserSession() user: UserHeaderRequest,
-    @Param('restaurantId') restaurantId: string
+    @CurrentUser("ID") userId: Types.ObjectId,
+    @Param('restaurantId', ParseObjectIdPipe) restaurantId: Types.ObjectId
   ) {
-    return this.orderService.getOrdersForUser(restaurantId, user.ATPayload.sub);
+    return this.orderService.getOrdersForUser(restaurantId, userId);
   }
 
   @Get('/:restaurantId')
-  @Protected()
-  @Roles( Role.ADMIN, Role.CUSTOMER )
+  @Roles( ROLE.ADMIN, ROLE.USER )
   getOrders(
-    @Param('restaurantId') restaurantId: string, 
-    @Query('page', ParseIntPipe) page: number,
-    @Query('limit', ParseIntPipe) limit: number,
+    @Param('restaurantId', ParseObjectIdPipe) restaurantId: Types.ObjectId, 
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
     @Query('status') status?: any
   ) {
     console.log('Query Params:', { page, limit, status });
@@ -72,9 +68,8 @@ export class OrderController {
 
 
   @Get('/checkout/:orderId')
-  @Protected()
-  @Roles( Role.ADMIN, Role.CUSTOMER )
-  getOrderCheckoutDetails(@Param('orderId') orderId: string) {
+  @Roles( ROLE.ADMIN, ROLE.USER )
+  getOrderCheckoutDetails(@Param('orderId', ParseObjectIdPipe) orderId: Types.ObjectId) {
     return this.orderService.getOrderCheckoutDetailsById(orderId);
   }
 

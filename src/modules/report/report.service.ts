@@ -1,11 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { DailySaleStats, DailySaleStatsDocument } from './schemas/daily_sale_stats.schema';
-import { Model, ObjectId, Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { MonthlySaleStats, MonthlySaleStatsDocument } from './schemas/monthly_sale_stats.schema';
-import { BadRequestException } from 'src/common/exceptions/http-exception';
-import { REDIS_CLIENT } from 'src/common/constants/redis.const';
 import Redis from 'ioredis';
+import { INJECTION_TOKEN } from 'src/common/constants/injection-token.constant';
 
 interface TopItemSoldParams {
   restaurantId: string;
@@ -20,7 +19,7 @@ interface TopItemSoldParams {
 export class ReportService {
 
   constructor(
-    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    @Inject(INJECTION_TOKEN.REDIS_CLIENT) private readonly redis: Redis,
     @InjectModel(DailySaleStats.name) private readonly dailySaleStatsModel: Model<DailySaleStatsDocument>,
     @InjectModel(MonthlySaleStats.name) private readonly monthlySaleStatsModel: Model<MonthlySaleStatsDocument>,
   ) {}
@@ -28,24 +27,17 @@ export class ReportService {
 
 
   // API
-  async getOverallSalesStats(restaurantId: string) { // Defaut : last 30 days
-
-    // Validate restaurantId
-    if (Types.ObjectId.isValid(restaurantId) === false) {
-      throw new BadRequestException('Invalid restaurant ID');
-    }
-
+  async getOverallSalesStats(restaurantId: Types.ObjectId) { // Defaut : last 30 days
 
     const now = new Date()
     now.setHours(0, 0, 0, 0) // Set to start of today
-    const objId = new Types.ObjectId(restaurantId)
 
     const [dailyStats, monthlyStats] = await Promise.all([
       // Get daily growth stats for last 30 days
-      this.getDailyGrowthStats(objId, now),
+      this.getDailyGrowthStats(restaurantId, now),
 
       // Get monthly stats (revenue, target) for last 12 months
-      this.getMonthlyPerformanceStatsAndTarget(objId, now),
+      this.getMonthlyPerformanceStatsAndTarget(restaurantId, now),
     ])
 
     // Top items performance in current month

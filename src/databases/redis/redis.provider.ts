@@ -1,10 +1,10 @@
 import { Logger, Provider } from '@nestjs/common';
 import Redis from 'ioredis';
-import { REDIS_CLIENT } from 'src/common/constants/redis.const';
+import { INJECTION_TOKEN } from 'src/common/constants/injection-token.constant';
 import { AppConfigService } from 'src/config/config.service';
 
 export const RedisProvider: Provider = {
-    provide: REDIS_CLIENT,
+    provide: INJECTION_TOKEN.REDIS_CLIENT,
     inject: [AppConfigService],
     useFactory: (config: AppConfigService) => {
         const redis = new Redis({

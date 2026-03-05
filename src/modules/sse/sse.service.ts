@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { filter, finalize, interval, map, merge, Subject } from 'rxjs';
+import { filter, finalize, map, Subject } from 'rxjs';
 import { SseEvent } from './dto/sse-event.dto';
 
 @Injectable()

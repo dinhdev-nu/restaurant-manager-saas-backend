@@ -1,11 +1,13 @@
 import { ArrayMinSize, IsEnum, IsInt, IsMongoId, IsNumber, IsOptional, IsString, Min, ValidateNested } from "class-validator";
 import { Type } from "class-transformer"
 import { OrderStatus } from "../schemas/order.schema";
+import { Types } from "mongoose";
 
 
 class ItemDto {
-    @IsString()
-    itemId: string;
+    @IsMongoId()
+    @Type(() => Types.ObjectId)
+    itemId: Types.ObjectId;
 
     @IsString()
     name: string; 
@@ -26,7 +28,8 @@ class ItemDto {
 class CustomerDto {
     @IsOptional()
     @IsMongoId()
-    customerId?: string;
+    @Type(() => Types.ObjectId)
+    customerId?: Types.ObjectId;
     @IsString()
     name: string;
     @IsString()
@@ -37,17 +40,20 @@ export class CreateOrderDto {
 
     @IsOptional()
     @IsMongoId()
-    _id?: string;
+    @Type(() => Types.ObjectId)
+    _id?: Types.ObjectId;
 
     @IsMongoId()
-    restaurantId: string;
+    @Type(() => Types.ObjectId)
+    restaurantId: Types.ObjectId;
 
     @IsString()
     table: string;
 
     @IsMongoId()
     @IsOptional()
-    staffId?: string;
+    @Type(() => Types.ObjectId)
+    staffId?: Types.ObjectId;
 
     @IsString()
     staff: string;
