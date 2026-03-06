@@ -1,9 +1,9 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from "@nestjs/common";
 import { Response, Request } from "express";
 import { BaseException } from "../exceptions";
-import { ERROR_CODE, ErrorCode } from "../constants/error-code.constant";
+import { ERROR_CODE } from "../constants/error-code.constant";
 import { CORRELATION_ID_HEADER } from "../middlewares/correlation-id.middleware";
-import { LoggerService } from "../../logger/logger.service";
+import { AppLoggerService } from "../../logger/logger.service";
 import { ApiErrorRessponse } from "../interfaces/api-response.interface";
 
 
@@ -11,7 +11,7 @@ import { ApiErrorRessponse } from "../interfaces/api-response.interface";
 @Catch(HttpException) // Bắt tất cả các lỗi HttpException
 export class HttpExceptionFilter implements ExceptionFilter {
 
-    constructor(private readonly loggerService: LoggerService) {}
+    constructor(private readonly loggerService: AppLoggerService) {}
 
     catch(exception: HttpException, host: ArgumentsHost) {
         const ctx = host.switchToHttp();
@@ -21,7 +21,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
         const status = exception.getStatus();
         const correlationId = req[CORRELATION_ID_HEADER] || 'N/A';
        
-
         if (exception instanceof BaseException) {
             const errResponse: ApiErrorRessponse = {
                 success: false,
@@ -32,8 +31,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
                 correlationId,
                 timestamp: new Date().toISOString()
             };
-            const logMsg = `[${correlationId}] <- ${req.method} ${req.url} | ${status} | ${exception.errorCode} | ${exception.message}`;
-            this.loggerService.writeLog(logMsg);
+            if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+                this.loggerService.error(
+                    exception.message,
+                    { correlationId, method: req.method, url: req.url, status, code: exception.errorCode, stack: exception.stack }
+                );
+            } else {
+                this.loggerService.warn(
+                    exception.message,
+                    { correlationId, method: req.method, url: req.url, status, code: exception.errorCode }
+                );
+            }
             return res.status(status).json(errResponse);
         }
 
@@ -52,8 +60,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
                 correlationId,
                 timestamp: new Date().toISOString()
             };
-            const logMsg = `[${correlationId}] <- ${req.method} ${req.url} | ${status} | ${errorResponse.errorCode} | ${exception.message}`;
-            this.loggerService.writeLog(logMsg);
+            this.loggerService.warn(
+                exception.message, 
+                { correlationId, method: req.method, url: req.url, status, code: errorResponse.errorCode }
+            );
             return res.status(status).json(errorResponse);
         }
 
@@ -68,8 +78,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
                 correlationId,
                 timestamp: new Date().toISOString()
             };
-            const logMsg = `[${correlationId}] <- ${req.method} ${req.url} | ${status} | ${errorResponse.errorCode} | ${exception.message}`;
-            this.loggerService.writeLog(logMsg);
+            this.loggerService.warn(
+                exception.message, 
+                { correlationId, method: req.method, url: req.url, status, code: errorResponse.errorCode }
+            );
             return res.status(status).json(errorResponse);
         }
 
@@ -84,8 +96,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
             correlationId,
             timestamp: new Date().toISOString()
         };
-        const logMsg = `[${correlationId}] <- ${req.method} ${req.url} | ${status} | ${errResponse.errorCode} | ${exception.message}`;
-        this.loggerService.writeLog(logMsg);
+        if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+            this.loggerService.error(
+                exception.message || 'An error occurred',
+                { correlationId, method: req.method, url: req.url, status, code: errResponse.errorCode, stack: exception.stack }
+            );
+        } else {
+            this.loggerService.warn(
+                exception.message || 'An error occurred',
+                { correlationId, method: req.method, url: req.url, status, code: errResponse.errorCode }
+            );
+        }
         return res.status(status).json(errResponse);
     }
 

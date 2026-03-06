@@ -1,43 +1,80 @@
-// src/logger/logger.service.ts
-import { Injectable } from '@nestjs/common';
-import * as fs from 'fs';
-import * as path from 'path';
-import { AppConfigService } from 'src/config/config.service';
+import { LoggerService, Injectable } from "@nestjs/common";
+import { AppConfigService } from "src/config/config.service";
+import * as winston from "winston";
+import 'winston-daily-rotate-file';
+
 
 @Injectable()
-export class LoggerService {
-  private readonly logDir: string;
-  private readonly logMaxSizeMB: number;
-  private readonly logFileNamePattern: string;
+export class AppLoggerService implements LoggerService {
+    private readonly logger: winston.Logger;
 
-  constructor(
-    private readonly config: AppConfigService
-  ) {
-    this.logDir = this.config.log.dir;
-    this.logMaxSizeMB = this.config.log.maxSize;
-    this.logFileNamePattern = this.config.log.fileName;
+    constructor(
+      private readonly config: AppConfigService
+    ) {
+      const logConfig = this.config.log;
 
-    if (!fs.existsSync(this.logDir)) {
-      fs.mkdirSync(this.logDir, { recursive: true });
+      this.logger = winston.createLogger({
+        level: logConfig.level,
+        format: winston.format.combine(
+          winston.format.errors({ stack: true }),
+          winston.format.timestamp(),
+        ),
+        transports: [
+          new winston.transports.Console({
+            silent: this.config.isProduction,
+            format: winston.format.combine(
+              winston.format.colorize(),
+              winston.format.printf((info) => {
+                const { timestamp, level, message, correlationId, stack, ...meta } = info;
+                const metaStr = Object.keys(meta).length ? JSON.stringify(meta) : '';
+                let log = `[${timestamp}] [${level}] [${correlationId || 'N/A'}] - ${message} - ${metaStr ? ' ' + metaStr : ''}`;
+                if (stack) log += `\n${stack}`;
+                return log;
+              })
+            )
+          }),
+
+          new winston.transports.DailyRotateFile({
+            dirname: logConfig.dir,
+            filename: `${logConfig.fileName}-%DATE%.log`,
+            datePattern: "YYYY-MM-DD",
+            zippedArchive: true,
+            maxSize: logConfig.maxSize + "m",
+            maxFiles: logConfig.maxFiles + "d",
+            format: winston.format.json()
+          }),
+
+          new winston.transports.DailyRotateFile({
+            dirname: logConfig.dir,
+            filename: "error-%DATE%.log",
+            datePattern: "YYYY-MM-DD",
+            zippedArchive: true,
+            maxSize: logConfig.maxSize + "m",
+            maxFiles: logConfig.maxFiles + "d",
+            level: 'error',
+            format: winston.format.json()
+          })
+        ]
+      })
     }
-  }
 
-  writeLog(message: string): void {
-    let idx = 1;
-    let currentFileName = this.logFileNamePattern.replace('xxx', idx.toString());
-    let fullPath = path.join(this.logDir, currentFileName);
-
-    while (this.isFileSizeExceeded(fullPath)) {
-      idx++;
-      currentFileName = this.logFileNamePattern.replace('xxx', idx.toString());
-      fullPath = path.join(this.logDir, currentFileName);
+    log(message: string, meta: Record<string, any> = {}) {
+        this.logger.info(message, meta);
     }
 
-    fs.appendFileSync(fullPath, message + '\n', { encoding: 'utf8' });
-  }
+    error(message: string, meta: Record<string, any> = {}) {
+        this.logger.error(message, meta);
+    }
 
-  private isFileSizeExceeded(filePath: string): boolean {
-    const maxSizeBytes = this.logMaxSizeMB * 1024 * 1024;
-    return fs.existsSync(filePath) && fs.statSync(filePath).size >= maxSizeBytes;
-  }
+    warn(message: string, meta: Record<string, any> = {}) {
+        this.logger.warn(message, meta);
+    }
+
+    debug(message: string, meta: Record<string, any> = {}) {
+        this.logger.debug(message, meta);
+    }
+
+    verbose(message: string, meta: Record<string, any> = {}) {
+        this.logger.verbose(message, meta);
+    }
 }

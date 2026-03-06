@@ -5,6 +5,7 @@ export interface ILogConfig {
     dir: string;
     fileName: string;
     maxSize: number;
+    maxFiles: number;
 }
 
 export default registerAs('log', () => ({
@@ -12,4 +13,5 @@ export default registerAs('log', () => ({
     dir: process.env.LOG_DIR,
     fileName: process.env.LOG_FILE_NAME,
     maxSize: Number(process.env.LOG_MAX_SIZE_MB),
+    maxFiles: Number(process.env.LOG_MAX_FILES_DAYS),
 }))

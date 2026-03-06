@@ -65,6 +65,10 @@ export class EnvironmentVariables {
     @IsInt()
     LOG_MAX_SIZE_MB: number;
 
+    @IsInt()
+    @Min(1) 
+    LOG_MAX_FILES_DAYS: number;
+
     @IsString()
     REDIS_HOST: string;
 

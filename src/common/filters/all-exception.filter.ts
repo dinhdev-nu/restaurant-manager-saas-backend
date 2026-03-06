@@ -1,14 +1,14 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpStatus } from "@nestjs/common";
-import { Response } from "express";
+import { Response, Request } from "express";
 import { ERROR_CODE } from "../constants/error-code.constant";
-import { LoggerService } from "../../logger/logger.service";
+import { AppLoggerService } from "../../logger/logger.service";
 import { CORRELATION_ID_HEADER } from "../middlewares/correlation-id.middleware";
 import { ApiErrorRessponse } from "../interfaces/api-response.interface";
 
 
 @Catch() // Bắt tất cả các lỗi
 export class AllExceptionFilter implements ExceptionFilter {
-    constructor(private readonly loggerService: LoggerService) {}
+    constructor(private readonly loggerService: AppLoggerService) {}
 
     catch(exception: Error, host: ArgumentsHost) {
         const ctx = host.switchToHttp();
@@ -27,9 +27,10 @@ export class AllExceptionFilter implements ExceptionFilter {
             correlationId,
             timestamp: new Date().toISOString()
         }
-        const logMsg = `[${correlationId}] <- ${req.method} ${req.url} | ${status} | ${response.errorCode} | ${exception.stack}`;
-        this.loggerService.writeLog(logMsg);
-
+        this.loggerService.error(
+                exception.message || response.message,
+                { correlationId, method: req.method, url: req.url, status, code: response.errorCode, stack: exception.stack }
+            );
         return res.status(status).json(response);
     }
 
