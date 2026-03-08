@@ -10,7 +10,7 @@ import { RestaurantModule } from './modules/restaurant/restaurant.module';
 import { OrderModule } from './modules/order/order.module'
 import { RolesGuard } from './common/guards/roles.guard';
 import { PaymentModule } from './modules/payment/payment.module';
-import { JwtGuard } from './common/guards/jwt-auth.guard';
+import { JwtGuard } from './common/guards/jwt-auth.guard' ;
 import { SseModule } from './modules/sse/sse.module';
 import { AppConfigModule } from './config/config.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -18,11 +18,14 @@ import { AllExceptionFilter } from './common/filters/all-exception.filter';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { TransformResponseInterceptor } from './common/interceptors/transform-response.interceptor';
 import { CorrelationIdMiddleware } from './common/middlewares/correlation-id.middleware';
-import { LoggerMiddleware } from './common/middlewares/logger.middleware';
+import { LoggerMiddleware } from './common/middlewares/logger.middleware'; 
+import { SharedThrottlerModule } from './shared/throttler/throttler.module';
+import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
 
 @Module({
   controllers: [],
   providers: [
+    { provide: APP_GUARD, useClass: AppThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_PIPE, useClass: ValidationPipeConfig },
@@ -34,6 +37,8 @@ import { LoggerMiddleware } from './common/middlewares/logger.middleware';
   ],
   imports: [
     AppConfigModule,
+
+    SharedThrottlerModule,
 
     SseModule,
     AuthModule,

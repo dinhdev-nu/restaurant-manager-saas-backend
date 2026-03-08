@@ -5,7 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { UserSchema } from './schema/user.schema';
 import { SessionSchema } from './schema/session.schema';
 import { JwtModule } from '@nestjs/jwt';
-import { MailModule } from '../mail/mail.module';
+import { MailModule } from '../../shared/mail/mail.module';
 
 @Module({
 

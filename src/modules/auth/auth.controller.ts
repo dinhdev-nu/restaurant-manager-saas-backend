@@ -5,6 +5,7 @@ import { Request, Response } from 'express';
 import { AppConfigService } from 'src/config/config.service';
 import { CurrentUser, Public } from 'src/common/decorators';
 import { Cookie } from 'src/common/decorators';
+import { SkipThrottle, ThrottleCustom } from 'src/common/decorators/throttler/throttler.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -12,11 +13,18 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly config: AppConfigService
   ) {}
-  
+
   @Public()
+  @ThrottleCustom('register', { ttl: 60000, limit: 2 })
   @Post("/register")
   getUser(@Body() dto: RegisterDTO): Promise<string> {
     return this.authService.register(dto)
+  }
+  @Public()
+  @SkipThrottle({ global: true })
+  @Post("/test")
+  test(): string { 
+    return "Hello world"
   }
 
   @Public()
@@ -47,7 +55,7 @@ export class AuthController {
     res.cookie('RT', data.refreshToken, {
       httpOnly: true,
       secure: this.config.isProduction, // Set to true in production
-      sameSite: 'lax', // cho phép khác domain
+      sameSite: 'lax', // cho phép khác domain 
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     })
 

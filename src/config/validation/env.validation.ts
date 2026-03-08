@@ -29,6 +29,30 @@ export class EnvironmentVariables {
     @Max(65535)
     PORT: number;
 
+    @IsInt()
+    @Min(1)
+    THROTTLE_TTL: number;
+
+    @IsInt()
+    @Min(1) 
+    THROTTLE_LIMIT: number;
+
+    @IsInt()
+    @Min(0)
+    THROTTLE_BLOCK_DURATION: number;
+
+    @IsInt()
+    @Min(1)
+    THROTTLE_DEFAULT_TTL: number;
+
+    @IsInt()
+    @Min(1)
+    THROTTLE_DEFAULT_LIMIT: number;
+
+    @IsInt()
+    @Min(0)
+    THROTTLE_DEFAULT_BLOCK_DURATION: number;
+    
     @IsString()
     CORS_ORIGIN: string;
 

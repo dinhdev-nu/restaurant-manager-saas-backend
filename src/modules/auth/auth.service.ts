@@ -6,7 +6,7 @@ import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Session, SessionDocument } from './schema/session.schema';
 import { JwtService } from '@nestjs/jwt';
-import { MailService } from '../mail/mail.service';
+import { MailService } from '../../shared/mail/mail.service';
 import { randomUUID } from 'crypto';
 import { JWTPayloadAT, JWTPayloadRT, UserHeaderRequest } from './auth.types';
 import { INJECTION_TOKEN } from 'src/common/constants/injection-token.constant';
@@ -25,12 +25,16 @@ type OTPCache = {
   FailCount: number
 }
 
+interface IAuthService {
+  exist(email?: string, phone?: string): Promise<boolean>;
+}
 
 export type SessionOut = { 
   accessToken: string,
   refreshToken?: string,
   user: UserDocument
 }
+
 
 @Injectable()
 export class AuthService {

@@ -3,6 +3,7 @@ import { ConfigModule } from "@nestjs/config";
 import { validate } from "./validation/env.validation";
 import { appConfig, clientConfig, corsConfig, databaseConfig, jwtConfig, oauth2Config, logConfig, mailConfig } from "./configs";
 import { AppConfigService } from "./config.service";
+import throrrlerConfig from "./configs/throrrler.config";
 
 // Wrap ConfigModule 
 @Global()
@@ -14,7 +15,7 @@ import { AppConfigService } from "./config.service";
             validate, // Validate env raw and convert to class instance
             load: [ 
                 appConfig, clientConfig, corsConfig, mailConfig,
-                databaseConfig, jwtConfig, oauth2Config, logConfig
+                databaseConfig, jwtConfig, oauth2Config, logConfig, throrrlerConfig
             ]
         })
     ],

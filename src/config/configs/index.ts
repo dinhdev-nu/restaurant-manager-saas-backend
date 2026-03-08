@@ -6,4 +6,5 @@ export { default as jwtConfig, IJwtConfig } from './jwt.config';
 export { default as oauth2Config, IOAuth2Config } from './oauth2.config';
 export { default as logConfig, ILogConfig } from './log.config';
 export { default as mailConfig, IMailConfig } from './mail.config';
+export { default as throttlerConfig, IThrottlerConfig } from './throrrler.config';
 
