@@ -21,6 +21,7 @@ import { CorrelationIdMiddleware } from './common/middlewares/correlation-id.mid
 import { LoggerMiddleware } from './common/middlewares/logger.middleware'; 
 import { SharedThrottlerModule } from './shared/throttler/throttler.module';
 import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
+import { QueueModule } from './queue/queue.module';
 
 @Module({
   controllers: [],
@@ -39,6 +40,7 @@ import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
     AppConfigModule,
 
     SharedThrottlerModule,
+    QueueModule,
 
     SseModule,
     AuthModule,
