@@ -25,10 +25,6 @@ type OTPCache = {
   FailCount: number
 }
 
-interface IAuthService {
-  exist(email?: string, phone?: string): Promise<boolean>;
-}
-
 export type SessionOut = { 
   accessToken: string,
   refreshToken?: string,
@@ -58,6 +54,7 @@ export class AuthService {
     @InjectModel(Session.name) private readonly sessionModel: Model<SessionDocument>,
     private readonly mailService: MailService
   ) {}
+
 
   async register(dto: RegisterDTO): Promise<string> {
 

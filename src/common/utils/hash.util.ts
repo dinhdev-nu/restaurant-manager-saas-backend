@@ -1,4 +1,5 @@
 import * as bycrypt from "bcrypt"
+import * as crypto from "crypto"
 
 const SALT_ROUNDS = 10;
 
@@ -14,5 +15,8 @@ export const HashUtil = {
     },
     async compare(plainText: string, hash: string): Promise<boolean> {
         return bycrypt.compare(plainText, hash);
+    },
+    async hashWithSHA256(plainText: string): Promise<string> {
+        return crypto.createHash('sha256').update(plainText).digest('hex');
     }
 } as const

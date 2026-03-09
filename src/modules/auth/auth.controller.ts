@@ -6,6 +6,7 @@ import { AppConfigService } from 'src/config/config.service';
 import { CurrentUser, Public } from 'src/common/decorators';
 import { Cookie } from 'src/common/decorators';
 import { SkipThrottle, ThrottleCustom } from 'src/common/decorators/throttler/throttler.decorator';
+import { CheckUserExistDTO } from './dto/user.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -20,13 +21,7 @@ export class AuthController {
   getUser(@Body() dto: RegisterDTO): Promise<string> {
     return this.authService.register(dto)
   }
-  @Public()
-  @SkipThrottle({ global: true })
-  @Post("/test")
-  test(): string { 
-    return "Hello world"
-  }
-
+  
   @Public()
   @Post("/send-otp")
   sendOtp(@Body() dto: RegisterDTO): Promise<boolean> {

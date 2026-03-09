@@ -6,8 +6,8 @@ import { BYPASS_INTERCEPTORS_KEY } from "../decorators";
 import { CORRELATION_ID_HEADER } from "../middlewares/correlation-id.middleware";
 import { ApiSuccessResponse } from "../interfaces/api-response.interface";
 
-export interface SuccessResponse<T> {
-    data: T;
+export interface SuccessResponse {
+    data: unknown;
     message?: string;
 }
 
