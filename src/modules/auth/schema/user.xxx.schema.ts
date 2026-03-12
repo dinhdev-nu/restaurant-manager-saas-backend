@@ -75,17 +75,17 @@ export class User {
 
   // ── Platform role ─────────────────────────────────────────
   /**
-   * superadmin : team vận hành, toàn quyền hệ thống
+   * admin : team vận hành, toàn quyền hệ thống
    * user       : người dùng thông thường (chủ nhà hàng, khách đặt online)
    * guest      : không lưu DB — xử lý ở middleware
    */
   @Prop({
     type: String,
-    enum: ['superadmin', 'user'],
+    enum: ['admin', 'user'],
     default: 'user',
     index: true,
   })
-  system_role: 'superadmin' | 'user';
+  system_role: 'admin' | 'user';
 
   // ── Status ────────────────────────────────────────────────
   @Prop({
@@ -112,10 +112,6 @@ export class User {
   last_login_ip: string | null;
 
   // ── 2FA ───────────────────────────────────────────────────
-  /** TOTP secret — AES-256 encrypted */
-  @Prop({ type: String, default: null, maxlength: 64, select: false })
-  two_factor_secret: string | null;
-
   @Prop({ type: Boolean, default: false })
   two_factor_enabled: boolean;
 
@@ -123,9 +119,6 @@ export class User {
   /** {"language":"vi","theme":"dark","notifications":{}} */
   @Prop({ type: UserPreferences, default: () => ({}) })
   preferences: UserPreferences;
-
-  @Prop({ type: Object, default: null })
-  metadata: Record<string, unknown> | null;
 
   // ── Soft delete ───────────────────────────────────────────
   @Prop({ type: Date, default: null, index: true })

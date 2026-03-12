@@ -8,8 +8,11 @@ export interface IUserRepository extends IBaseRepository<UserDocument> {
     findUserExistByEmail(email: string): Promise<UserDocument | null>;
     findUserExistByPhone(phone: string): Promise<UserDocument | null>;
     findUserPendingByEmail(email: string): Promise<UserDocument | null>;
+    findUserExistById(id: Types.ObjectId): Promise<UserDocument | null>;
     getUserPendingDocumentByEmail(email: string): Promise<UserDocument | null>;
+
 }
+
 
 @Injectable()
 export class UserRepository 
@@ -22,21 +25,39 @@ export class UserRepository
     ) {
         super(userModel);
     }
+    async findUserExistById(id: Types.ObjectId): Promise<UserDocument | null> {
+        return this.model.findOne({ _id: id, deleted_at: null })
+            .select('+password_hash')
+            .lean()
+            .exec();
+    }
 
     async findUserExistByEmail(email: string): Promise<UserDocument | null> {
-        return this.model.findOne({ email, deleted_at: null }).lean().exec();
+        return this.model.findOne({ email, deleted_at: null })
+            .select('+password_hash')
+            .lean()
+            .exec();
+    }
+    
+    async findUserExistByPhone(phone: string): Promise<UserDocument | null> {
+        return this.model.findOne({ phone, deleted_at: null })
+            .select('+password_hash')
+            .lean()
+            .exec();
     }
 
     async getUserPendingDocumentByEmail(email: string): Promise<UserDocument | null> {
-        return this.model.findOne({ email, deleted_at: null, status: 'pending' }).exec();
+        return this.model.findOne({ email, deleted_at: null, status: 'pending' })
+            .select('+password_hash')
+            .lean()
+            .exec();
     }
 
     async findUserPendingByEmail(email: string): Promise<UserDocument | null> {
-        return this.model.findOne({ email, deleted_at: null, status: 'pending' }).lean().exec();
-    }
-
-    async findUserExistByPhone(phone: string): Promise<UserDocument | null> {
-        return this.model.findOne({ phone, deleted_at: null }).lean().exec();
+        return this.model.findOne({ email, deleted_at: null, status: 'pending' })
+            .select('+password_hash')
+            .lean()
+            .exec();
     }
 
 

@@ -15,6 +15,9 @@ export class DeviceInfo {
   /** e.g. "Desktop" | "Mobile" | "Tablet" */
   @Prop({ type: String, default: null })
   device: string | null;
+
+  @Prop({ type: String, default: null })
+  user_agent: string | null;
 }
 
 // ─── Main schema ─────────────────────────────────────────────
