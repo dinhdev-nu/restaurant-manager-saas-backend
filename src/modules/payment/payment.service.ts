@@ -36,7 +36,7 @@ export class PaymentService {
         _id: dto.orderId,
         restaurantId: restaurantId,
       }).session(session);
-      if (!order) throw new NotFoundException(Order.name, dto.orderId);
+      if (!order) throw new NotFoundException(ERROR_CODE.RESOURCE_NOT_FOUND, 'Order not found');
       if (order.status === OrderStatus.CANCELLED)
         throw new ConflictException(ERROR_CODE.CONFLICT_INPUT_ERROR, 'Order has been cancelled');
       if (order.paymentStatus === OrderPaymentStatus.PAID) 
@@ -91,7 +91,7 @@ export class PaymentService {
       _id: dto.orderId,
       restaurantId: restaurantId,
     }).lean();
-    if (!order) throw new NotFoundException(Order.name, dto.orderId);
+    if (!order) throw new NotFoundException(ERROR_CODE.RESOURCE_NOT_FOUND, 'Order not found');
     if (order.status === OrderStatus.CANCELLED)
       throw new ConflictException(ERROR_CODE.CONFLICT_INPUT_ERROR, 'Order has been cancelled');
     if (order.paymentStatus === OrderPaymentStatus.PAID) 

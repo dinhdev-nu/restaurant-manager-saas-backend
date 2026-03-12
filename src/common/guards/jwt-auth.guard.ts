@@ -3,14 +3,13 @@ import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import Redis from 'ioredis';
 import { INJECTION_TOKEN } from 'src/common/constants/injection-token.constant';
-import { JWTPayloadAT, UserHeaderRequest } from 'src/modules/auth/auth.types';
 import { IS_PUBLIC_KEY } from '../decorators/auth/public.decorator';
 import { UnauthorizedException } from '../exceptions';
 import { ERROR_CODE } from '../constants/error-code.constant';
 import { AppConfigService } from 'src/config/config.service';
 import { Request } from 'express';
+import { AccessTokenPayload, JWT_BLACKLIST_PREFIX } from 'src/modules/auth/auth.service.xxx';
 
-export { UserHeaderRequest };
 const AUTHORIZATION = "authorization";
 export const USER = "user";
 
@@ -37,32 +36,26 @@ export class JwtGuard implements CanActivate {
 
     const token = authorization.split(" ")[1];
     if (!token) 
-      throw new UnauthorizedException(ERROR_CODE.UNAUTHORIZED, "Missing access token");
+      throw new UnauthorizedException(ERROR_CODE.UNAUTHORIZED, "Không tìm thấy token");
 
-    let payload: JWTPayloadAT;
+    let payload: AccessTokenPayload;
     try {
       payload = this.jwt.verify(token, { secret: this.config.jwt.accessSecret });
     } catch (err) {
-      switch (err.name) {
-        case "JsonWebTokenError":
-          throw new UnauthorizedException(ERROR_CODE.UNAUTHORIZED, "Invalid access token");
-        case "TokenExpiredError":
-          throw new UnauthorizedException(ERROR_CODE.TOKEN_EXPIRED, "Token expired");
-        default: 
-          throw new UnauthorizedException(ERROR_CODE.UNAUTHORIZED, "Unauthorized");
+      if (err.name === "TokenExpiredError") {
+        throw new UnauthorizedException(ERROR_CODE.TOKEN_EXPIRED, "Token hết hạn, hãy refresh");
       }
-     }
+      throw new UnauthorizedException(ERROR_CODE.UNAUTHORIZED, "Token không hợp lệ");
+    }
 
-    const { sub, sid } = payload;
-    const key = `auth:${sub}:${sid}`; 
-    const rawData = await this.redis.get(key);
-    const data = JSON.parse(rawData!) as UserHeaderRequest;
+     // Check backlist
+    const backlistKey = `${JWT_BLACKLIST_PREFIX}${payload.jti}`;
+    const isBlacklisted = await this.redis.get(backlistKey);
+    if (isBlacklisted) {
+      throw new UnauthorizedException(ERROR_CODE.UNAUTHORIZED, "Phiên đã bị thu hồi");
+    }
 
-    req[USER] = {
-      ATPayload: payload,
-      info: data.info,
-      session: data.session
-    } as UserHeaderRequest;
+    req[USER] = payload;
     
     return true;
   }

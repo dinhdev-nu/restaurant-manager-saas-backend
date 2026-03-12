@@ -1,13 +1,14 @@
-import { Document, FilterQuery, Model, UpdateQuery } from "mongoose";
+import { ClientSession, Document, FilterQuery, Model, UpdateQuery } from "mongoose";
 import { Types } from "mongoose";
 
 export interface IBaseRepository<T> {
     findAll(filter?: Partial<T>): Promise<T[]>;
     findById(id: Types.ObjectId): Promise<T | null>;
     findOne(filter: Partial<T>): Promise<T | null>;
-    create(data: Partial<T>): Promise<T>;
-    update(id: Types.ObjectId, data: Partial<T>): Promise<T | null>;
-    delete(id: Types.ObjectId): Promise<boolean>;
+    findByIdAndUpdate(id: Types.ObjectId, data: Partial<T>, session?: ClientSession): Promise<T | null>;
+    create(data: Partial<T>, session?: ClientSession): Promise<T>;
+    update(id: Types.ObjectId, data: Partial<T>, session?: ClientSession): Promise<T | null>;
+    delete(id: Types.ObjectId, session?: ClientSession): Promise<boolean>;
     count(filter?: Partial<T>): Promise<number>;
 }
 
@@ -26,22 +27,26 @@ export abstract class BaseRepository<T extends Document> implements IBaseReposit
         return this.model.findOne(filter).lean().exec() as Promise<T | null>;
     }
 
-    async create(data: Partial<T>): Promise<T> {
-        const doc = new this.model(data);
-        return doc.save() as Promise<T>;
+    async findByIdAndUpdate(id: Types.ObjectId, data: UpdateQuery<T>, session?: ClientSession): Promise<T | null> {
+        return this.model.findByIdAndUpdate(id, data, { new: true, session }).lean().exec() as Promise<T | null>;
     }
 
-    async update(id: Types.ObjectId, data: UpdateQuery<T>): Promise<T | null> {
+    async create(data: Partial<T>, session?: ClientSession): Promise<T> {
+        const doc = new this.model(data);
+        return doc.save({ session }) as Promise<T>;
+    }
+
+    async update(id: Types.ObjectId, data: UpdateQuery<T>, session?: ClientSession): Promise<T | null> {
         return this.model.findByIdAndUpdate(
             id,
             data,
-            { new: true }
+            { new: true, session }
         ).lean()
         .exec() as Promise<T | null>; 
     }
 
-    async delete(id: Types.ObjectId): Promise<boolean> {
-        const result = await this.model.findByIdAndDelete(id).exec()
+    async delete(id: Types.ObjectId, session?: ClientSession): Promise<boolean> {
+        const result = await this.model.findByIdAndDelete(id, { session }).exec()
         return result !== null;
     }
 

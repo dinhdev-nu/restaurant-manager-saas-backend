@@ -2,7 +2,7 @@ import { createParamDecorator, ExecutionContext } from "@nestjs/common";
 import { Request } from "express";
 
 export const COOKIEPARAM = {
-    REFRESH_TOKEN: "RT",
+    REFRESH_TOKEN: "refresh_token",
 } as const;
 
 type CookieParam = keyof typeof COOKIEPARAM;
@@ -12,6 +12,6 @@ export const Cookie = createParamDecorator(
         const ctx = context.switchToHttp()
         const req = ctx.getRequest<Request>();
         const cookies = req.cookies;
-        return cookies[data];
+        return cookies[COOKIEPARAM[data]];
     }
 )

@@ -3,7 +3,8 @@ import { Observable, tap } from 'rxjs';
 import { AppLoggerService } from '../../logger/logger.service';
 import { Request } from 'express';
 import { CORRELATION_ID_HEADER } from '../middlewares/correlation-id.middleware';
-import { USER, UserHeaderRequest } from '../guards/jwt-auth.guard';
+import { USER } from '../guards/jwt-auth.guard';
+import { AccessTokenPayload } from 'src/modules/auth/auth.service.xxx';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
@@ -19,8 +20,8 @@ export class LoggingInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       tap(() => {
-        const user = req[USER] as UserHeaderRequest;
-        const userId = user ? user.info._id : 'N/A';
+        const user = req[USER] as AccessTokenPayload;
+        const userId = user ? user.sub : 'N/A';
 
         this.logger.log('Handler executed', { correlationId, userId, handler });
       }),
