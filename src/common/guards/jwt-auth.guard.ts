@@ -48,13 +48,13 @@ export class JwtGuard implements CanActivate {
       throw new UnauthorizedException(ERROR_CODE.UNAUTHORIZED, "Token không hợp lệ");
     }
 
-     // Check backlist
+     // Check backlist 
     const backlistKey = `${JWT_BLACKLIST_PREFIX}${payload.jti}`;
     const isBlacklisted = await this.redis.get(backlistKey);
     if (isBlacklisted) {
       throw new UnauthorizedException(ERROR_CODE.UNAUTHORIZED, "Phiên đã bị thu hồi");
     }
-
+ 
     req[USER] = payload;
     
     return true;

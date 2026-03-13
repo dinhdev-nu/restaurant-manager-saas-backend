@@ -9,7 +9,6 @@ export interface ApiErrorRessponse {
     correlationId: string;
     timestamp: string;
 }
-
 export interface ApiSuccessResponse<T> {
     success: boolean;
     statusCode: number;

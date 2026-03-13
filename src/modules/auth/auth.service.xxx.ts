@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { INJECTION_TOKEN } from "src/common/constants/injection-token.constant";
 import { IUserRepository } from "./repositories/user.repository";
-import { CheckEmailDTO, LoginDTO, RegisterDTO, ResendOTPDTO, VerifyOTPDTO } from "./dto/user.dto";
+import { CheckEmailDTO, LoginDTO, RegisterDTO, ResendOTPDTO, VerifyOTPDTO } from "./dto/auth.dto";
 import { BadRequestException, ConflictException, ForbiddenException, InternalServerException, NotFoundException, TooManyRequestException, UnauthorizedException } from "src/common/exceptions";
 import { ERROR_CODE } from "src/common/constants/error-code.constant";
 import { HashUtil } from "src/common/utils/hash.util";
@@ -114,7 +114,6 @@ export class AuthService {
     Promise<{ available: boolean, acction?: string, hint?: string }> 
     {
         const user = await this.userRepository.findUserExistByEmail(dto.email);
-        
         if (user === null) { 
             return { available: true }
         }
@@ -302,7 +301,6 @@ export class AuthService {
         } else {
             user = await this.userRepository.findUserExistByPhone(dto.identifier);
         }
-
         if (!user) {
             throw new NotFoundException(ERROR_CODE.USER_NOT_FOUND, `Tài khoản không tồn tại`)
         }
@@ -451,11 +449,10 @@ export class AuthService {
                 system_role: payload.system_role,
                 jti: payload.jti,
                 iat: now,
-                exp: now + (15 * 60) // 15 minutes
+                exp: now + TimeUtil.parseTtlString(this.config.jwt.accessTtl) // 15 minutes
             }
             const access_token = this.jwt.sign(accessTokenPayload, {
                 secret: this.config.jwt.accessSecret,
-                expiresIn: this.config.jwt.accessTtl,
                 algorithm: 'HS256'
             });
             return { access_token }
@@ -1227,7 +1224,7 @@ export class AuthService {
             system_role: system_role,
             jti: randomUUID(),
             iat: now,
-            exp: now + (15 * 60) // 15 minutes
+            exp: now + TimeUtil.parseTtlString(this.config.jwt.accessTtl) // 15 minutes
         }
         // Generate refresh token
         const refreshTokenPayload: RefreshTokenPayload = {
@@ -1239,18 +1236,13 @@ export class AuthService {
             exp: now + TimeUtil.parseTtlString(refreshTokenTtl) // 7 days or 24 hours
         }
 
-        const [access_token, refresh_token] = await Promise.all([
-            this.jwt.signAsync(accessTokenPayload, {
-                secret: this.config.jwt.accessSecret,
-                expiresIn: this.config.jwt.accessTtl,
-                algorithm: 'HS256'
-            }),
-            this.jwt.signAsync(refreshTokenPayload, {
-                secret: this.config.jwt.refreshSecret,
-                expiresIn: refreshTokenTtl,
-                algorithm: 'HS256'
-            })
-        ]);
+        const access_token = this.jwt.sign(
+            accessTokenPayload,{ secret: this.config.jwt.accessSecret }
+        )
+        const refresh_token = this.jwt.sign(
+            refreshTokenPayload,{ secret: this.config.jwt.refreshSecret }
+        )
+        
         return { access_token, refresh_token };
     }
 

@@ -11,7 +11,8 @@ export const RedisProvider: Provider = {
             host: config.database.redisHost,
             port: config.database.redisPort,
             password: config.database.redisPassword || undefined,
-            db: config.database.redisDb
+            db: config.database.redisDb,
+            maxRetriesPerRequest: 5, // Disable retrying failed commands
         })
 
         const logger = new Logger('Redis');

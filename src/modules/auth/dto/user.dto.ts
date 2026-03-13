@@ -1,129 +1,46 @@
-import { Transform } from "class-transformer";
-import { IsBoolean, isEmail, IsEmail, IsEnum, IsHash, IsMongoId, IsObject, IsOptional, IsPhoneNumber, IsString, Length, ValidateIf } from "class-validator";
-import { Types } from "mongoose";
-import { IsEmailOrPhone } from "src/common/pipes/identifier.pipe";
-import { OTP_LENGTH } from "src/common/utils/otp.util";
+import { Type } from "class-transformer";
+import { IsBoolean, IsEnum, IsISO8601, IsOptional, IsString, Length, ValidateNested } from "class-validator";
 
-
-export class CheckEmailDTO {
-    @IsEmail()
-    email: string;
-}
-
-export class RegisterDTO {
-    @IsEmail()
-    email: string;
-    
-    @IsString()
-    @Length(6, 32)
-    password: string;
-
-    @IsString()
-    @Length(5, 100)
-    full_name: string;
-
+export class UpdateUserNotificationPreferencesDTO {
     @IsOptional()
-    @IsPhoneNumber('VN')
-    phone?: string;
-}
-
-export class VerifyOTPDTO {
-    @IsEmail()
-    email: string;
-
-    @IsString()
-    @Length(OTP_LENGTH, OTP_LENGTH)
-    otp: string;
-}
-
-export class ResendOTPDTO extends CheckEmailDTO {}
-export class ForgotPasswordDTO extends CheckEmailDTO {}
-export class VerifyForgotPasswordOTPDTO {
-    @IsString()
-    session_token: string;
-
-    @IsString()
-    @Length(OTP_LENGTH, OTP_LENGTH)
-    otp: string;
-}
-
-export class ResetPasswordDTO {
-    @IsString()
-    grant_token: string;
-
-    @IsString()
-    @Length(6, 32)
-    new_password: string;
-}
-
-export class ChangePasswordDTO {
-    @IsString()
-    @Length(6, 32)
-    current_password: string;
-
-    @IsString()
-    @Length(6, 32)
-    new_password: string;
-}
-
-export class LoginDTO {
-
-    @IsEmailOrPhone()
-    identifier: string; // email or phone
-
-    @Transform(({ obj }) => {
-        return isEmail(obj.identifier) ? 'email' : 'phone';
-    })
-    identifier_type: 'email' | 'phone';
-
-    @IsString()
-    @Length(6, 32)
-    password: string;
-
     @IsBoolean()
-    remember_me: boolean;
-
+    email?: boolean;
     @IsOptional()
-    @IsObject()
-    device_info?: DeviceInfo | null;
-    
-    user_ip?: string;
-
+    @IsBoolean()
+    phone?: boolean;
+    @IsOptional()
+    @IsBoolean()
+    push?: boolean;
 }
 
-export interface DeviceInfo {
-    browser: string | null;
-    os: string | null;
-    device: string | null;
-    user_agent: string | null;
-}
-
-export class Send2FAOtpDTO {
-    @IsString()
-    temp_token: string;
-}
-export class Verify2FAOTPDTO extends Send2FAOtpDTO {
-    @IsString()
-    @Length(OTP_LENGTH, OTP_LENGTH)
-    otp: string;
-}
-
-export class Enable2FADTO {
+export class UpdateUserProfileDTO {
+    @IsOptional()
     @IsString()
     @Length(6, 32)
-    password: string;
+    full_name?: string;
+
+    // Không trong tương lai
+    @IsOptional()
+    @IsISO8601()
+    date_of_birth?: string;
+
+    @IsOptional()
+    @IsEnum(['male', 'female', 'other'])
+    gender?: 'male' | 'female' | 'other';
 }
 
-export class Disable2FADTO extends Enable2FADTO {}
+export class UpdateUserPreferencesDTO { 
+    @IsOptional()
+    @IsEnum(['en', 'vi'])
+    language?: 'en' | 'vi';
 
-export class RevokeSessionDTO {
-    @IsString()
-    session_id: Types.ObjectId;
+    @IsOptional()
+    @IsEnum(['light', 'dark', 'system'])
+    theme?: 'light' | 'dark' | 'system';
+
+    @IsOptional()
+    @ValidateNested({ each: true })
+    @Type(() => UpdateUserNotificationPreferencesDTO)
+    notifications?: UpdateUserNotificationPreferencesDTO; 
 }
-
-export class SendPhoneOTPDTO {
-    @IsPhoneNumber('VN')
-    phone: string;
-}
-
-export class VerifyPhoneOTPDTO extends Verify2FAOTPDTO {}
+ 

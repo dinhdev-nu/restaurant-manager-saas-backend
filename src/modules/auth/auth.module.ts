@@ -11,6 +11,8 @@ import { INJECTION_TOKEN } from 'src/common/constants/injection-token.constant';
 import { UserRepository } from './repositories/user.repository';
 import { SessionRepository } from './repositories/session.repository';
 import { OAuthProviderRepository } from './repositories/oauth-provider.repository';
+import { UserController } from './user.controler.xxx';
+import { UserService } from './user.service.xxx';
 
 @Module({
 
@@ -24,9 +26,10 @@ import { OAuthProviderRepository } from './repositories/oauth-provider.repositor
     MailModule
   ],
 
-  controllers: [AuthController],
+  controllers: [AuthController, UserController],
   providers: [
     AuthService,
+    UserService,
     {
       provide: INJECTION_TOKEN.USER_REPOSITORY,
       useClass: UserRepository

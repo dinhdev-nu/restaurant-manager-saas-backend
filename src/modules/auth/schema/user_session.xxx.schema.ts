@@ -58,7 +58,7 @@ export class UserSession {
   ip_address: string | null;
 
   // ── Lifecycle ─────────────────────────────────────────────
-  @Prop({ type: Date, required: true, index: true })
+  @Prop({ type: Date, required: true })
   expires_at: Date;
 
   @Prop({ type: Boolean, default: false })

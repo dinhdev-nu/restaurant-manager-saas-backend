@@ -23,11 +23,18 @@ export class MailService {
   }
 
   async sendOtpMail(to: string, subject: string, otp: string) {
-    // Đọc file html
-    let templatePath = path.join(__dirname, 'templates', 'otp-register.html');
-    if(!existsSync(templatePath)) {
-      templatePath = path.join(process.cwd(), 'src', 'modules', 'mail', 'templates', 'otp-register.html');
+    // Tim template o ca runtime src va dist
+    const candidates = [
+      path.join(__dirname, 'templates', 'otp-register.html'),
+      path.join(process.cwd(), 'src', 'shared', 'mail', 'templates', 'otp-register.html'),
+      path.join(process.cwd(), 'dist', 'shared', 'mail', 'templates', 'otp-register.html'),
+    ];
+
+    const templatePath = candidates.find((p) => existsSync(p));
+    if (!templatePath) {
+      throw new Error(`OTP template not found. Checked: ${candidates.join(', ')}`);
     }
+
     let html = readFileSync(templatePath, 'utf-8');
 
     // Replace OTP

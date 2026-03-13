@@ -1,5 +1,5 @@
 import { createParamDecorator, ExecutionContext } from "@nestjs/common";
-import { DeviceInfo } from "src/modules/auth/dto/user.dto";
+import { DeviceInfo } from "src/modules/auth/dto/auth.dto";
 import { UAParser } from "ua-parser-js";
 
 

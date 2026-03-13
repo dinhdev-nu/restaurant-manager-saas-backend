@@ -27,10 +27,11 @@ export class AllExceptionFilter implements ExceptionFilter {
             correlationId,
             timestamp: new Date().toISOString()
         }
+        console.error('Unhandled exception:', response)
         this.loggerService.error(
-                exception.message || response.message,
-                { correlationId, method: req.method, url: req.url, status, code: response.errorCode, stack: exception.stack }
-            );
+            exception.message || response.message,
+            { correlationId, method: req.method, url: req.url, status, code: response.errorCode, stack: exception.stack }
+        );
         return res.status(status).json(response);
     }
 

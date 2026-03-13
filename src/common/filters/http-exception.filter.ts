@@ -31,6 +31,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
                 correlationId,
                 timestamp: new Date().toISOString()
             };
+
             if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
                 this.loggerService.error(
                     exception.message,
@@ -54,7 +55,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
             const errorResponse: ApiErrorRessponse = {
                 success: false,
                 errorCode: ERROR_CODE.VALIDATION_ERROR,
-                message: 'Validation failed',
+                message: 'Dư liệu đầu vào không hợp lệ',
                 details: response.message,
                 path: req.url,
                 correlationId,

@@ -5,17 +5,19 @@ import { ThrottleCustom } from "src/common/decorators/throttler/throttler.decora
 import { RegisterDTO, CheckEmailDTO, VerifyOTPDTO, ResendOTPDTO, LoginDTO, DeviceInfo, 
     Send2FAOtpDTO, Verify2FAOTPDTO, ForgotPasswordDTO, VerifyForgotPasswordOTPDTO, 
     ResetPasswordDTO, ChangePasswordDTO, Enable2FADTO, Disable2FADTO, RevokeSessionDTO, 
-    SendPhoneOTPDTO, VerifyPhoneOTPDTO } from "./dto/user.dto";
+    SendPhoneOTPDTO, VerifyPhoneOTPDTO } from "./dto/auth.dto";
 import { SuccessResponse } from "src/common/interceptors/transform-response.interceptor";
 import { UserIP } from "src/common/decorators/user/ip.decorator";
 import { UserDevice } from "src/common/decorators/user/device.decotator";
 import { Request, Response } from "express";
 import { Types } from "mongoose";
+import { AppConfigService } from "src/config/config.service";
 
-@Controller('auth')
+@Controller('auths')
 export class AuthController {
     constructor(
-        private readonly authService: AuthService
+        private readonly authService: AuthService,
+        private readonly config: AppConfigService
     ) {}
 
     @Public()
@@ -55,6 +57,7 @@ export class AuthController {
         @UserIP() user_ip: string, @UserDevice() user_device: DeviceInfo, @Body() dto: LoginDTO,
         @Res({ passthrough: true }) res: Response
     ) {
+        dto.identifier_type = dto.identifier.includes('@') ? 'email' : 'phone';
         dto.user_ip = user_ip;
         dto.device_info = user_device;
         const response = await this.authService.login(dto)
@@ -229,14 +232,16 @@ export class AuthController {
         return this.authService.verifyPhoneOTP(user_id, dto.otp)
     }
 
+    @Public()
     @Get('/oauth/:provider')
     async oauthLogin(@Param('provider') provider: string, @Res() res: Response) {
         const { redirect_url } = await this.authService.oauthInit(provider)
         return res.redirect(redirect_url);
     }
 
-    @Get('/:provider/callback')
-    async oauthCallback(
+    @Public()
+    @Get('/:provider/callback') 
+    async oauthCallback( 
         @Param('provider') provider: string,
         @UserIP() user_ip: string,
         @UserDevice() user_device: DeviceInfo,
@@ -260,9 +265,8 @@ export class AuthController {
             sameSite: 'strict',
             maxAge: this.getTimeToLifeCookies(false),
         });
-        return {
-            access_token: response.access_token
-        }
+        const url = this.config.client.clientUrl + "oauth/callback?access_token=" + response.access_token
+        return res.redirect(url);
     }
 
     private getTimeToLifeCookies(rememberMe: boolean): number {
