@@ -6,6 +6,7 @@ import { OTPProcessor } from "./processors/otp.processor";
 import { OTPProducer } from "./producers/otp.producer";
 import { OTP_QUEUE } from "./jobs/otp.job";
 import { MailModule } from "src/shared/mail/mail.module";
+import { AppConfigService } from "src/config/config.service";
 
 @Global()
 @Module({
@@ -14,9 +15,15 @@ import { MailModule } from "src/shared/mail/mail.module";
         BullModule.registerQueueAsync(
             {
                 name: OTP_QUEUE,
-                inject: [INJECTION_TOKEN.REDIS_CLIENT],
-                useFactory: (redis: Redis) => ({
-                    connection: redis as any,
+                inject: [AppConfigService],
+                useFactory: (config: AppConfigService) => ({
+                    connection: {
+                        host: config.database.redisHost,
+                        port: config.database.redisPort,
+                        password: config.database.redisPassword || undefined,
+                        db: config.database.redisDb,
+                        maxRetriesPerRequest: null, 
+                    },
                     defaultJobOptions: {
                         attempts: 2,
                         removeOnComplete: true,

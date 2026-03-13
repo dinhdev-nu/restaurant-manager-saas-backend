@@ -1,7 +1,6 @@
 import { Controller, Get, Post, Body, Param, Put} from '@nestjs/common';
 import { MenuItemsOut, RestaurantService } from './restaurant.service';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
-import { UserDocument } from '../auth/schema/user.schema';
 import { CreateItemDto } from './dto/create-item.dto';
 import { CreateTableDto } from './dto/create-table.dto';
 import { TableDocument } from './schemas/table.schema';
@@ -10,7 +9,7 @@ import { ParseObjectIdPipe } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
 import { CurrentUser, Roles } from 'src/common/decorators';
 import { ROLE } from 'src/common/constants/role.constant';
-import { UserHeaderRequest } from '../auth/auth.types';
+import { AccessTokenPayload } from '../auth/auth.service.xxx';
 
 
 @Controller('restaurants')
@@ -20,7 +19,7 @@ export class RestaurantController {
   ) {}
 
   @Post()
-  create(@Body() dto: CreateRestaurantDto, @CurrentUser() user: UserHeaderRequest) {
+  create(@Body() dto: CreateRestaurantDto, @CurrentUser() user: AccessTokenPayload) {
     return this.restaurantService.create(user, dto);
   }
 
@@ -43,7 +42,7 @@ export class RestaurantController {
 
   @Get("my-restaurants")
   @Roles( ROLE.ADMIN, ROLE.USER )
-  findMyRestaurants(@CurrentUser('ID') id: Types.ObjectId) {
+  findMyRestaurants(@CurrentUser('sub') id: Types.ObjectId) {
     return this.restaurantService.getListRestaurantsByUserId(id);
   }
 
@@ -93,7 +92,7 @@ export class RestaurantController {
 
   @Post("/staff/:id/activate")
   @Roles( ROLE.ADMIN, ROLE.USER)
-  activateStaff(@Param("id", ParseObjectIdPipe) staffId: Types.ObjectId, @CurrentUser('ID') userId: Types.ObjectId){
+  activateStaff(@Param("id", ParseObjectIdPipe) staffId: Types.ObjectId, @CurrentUser('sub') userId: Types.ObjectId){
     return this.restaurantService.activeOrDeactiveStaff(userId, staffId);
   }
 

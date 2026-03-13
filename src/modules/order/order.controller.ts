@@ -29,7 +29,7 @@ export class OrderController {
   @Get('/drafts/:restaurantId')
   @Roles(ROLE.ADMIN, ROLE.USER)
   getDraftOrders(
-    @CurrentUser('ID') userId: Types.ObjectId,
+    @CurrentUser('sub') userId: Types.ObjectId,
     @Param('restaurantId', ParseObjectIdPipe) restaurantId: Types.ObjectId, 
     @Query('isMyDrafts', new ParseBoolPipe({ optional: true })) isMyDrafts?: boolean
   ) {
@@ -48,7 +48,7 @@ export class OrderController {
   @Get('/user/:restaurantId')
   @Roles(ROLE.ADMIN, ROLE.USER)
   getOrdersForUser(
-    @CurrentUser("ID") userId: Types.ObjectId,
+    @CurrentUser("sub") userId: Types.ObjectId,
     @Param('restaurantId', ParseObjectIdPipe) restaurantId: Types.ObjectId
   ) {
     return this.orderService.getOrdersForUser(restaurantId, userId);

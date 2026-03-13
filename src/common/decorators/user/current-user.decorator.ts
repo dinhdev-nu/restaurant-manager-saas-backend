@@ -1,27 +1,20 @@
 import { createParamDecorator, ExecutionContext } from "@nestjs/common";
 import { Request } from "express";
 import { USER } from "src/common/guards/jwt-auth.guard";
-import { UserHeaderRequest } from "src/modules/auth/auth.types";
+import { AccessTokenPayload } from "src/modules/auth/auth.service.xxx"
 
-export const UserParamMapping = {
-    INFO: (user: UserHeaderRequest) => user.info,
-    PAYLOAD: (user: UserHeaderRequest) => user.ATPayload,
-    SESSION: (user: UserHeaderRequest) => user.session,
-    ID: (user: UserHeaderRequest) => user.info._id,
-} as const;
 
-type UserParamKey = keyof typeof UserParamMapping;
+type UserParamKey = keyof AccessTokenPayload;
 
 export const CurrentUser = createParamDecorator(
     (data: UserParamKey | undefined, ctx: ExecutionContext) => {
         const req = ctx.switchToHttp().getRequest<Request>();
-        const user = req[USER] as UserHeaderRequest;
+        const user = req[USER] as AccessTokenPayload;
 
         if (!user) return null;
 
         if (!data) return user;
 
-        const getter = UserParamMapping[data];
-        return getter ? getter(user) : null;
+        return user[data];
     }
 )

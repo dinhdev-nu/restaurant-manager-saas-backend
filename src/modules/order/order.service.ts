@@ -46,7 +46,7 @@ export class OrderService {
     ).select(select).lean().exec();
 
     if ( menuItems.length !== items.length )
-      throw new NotFoundException(MenuItem.name, 'One or more items not found');
+      throw new NotFoundException(ERROR_CODE.RESOURCE_NOT_FOUND, 'One or more items not found');
 
     // Calculate Total Amount
     let totalAmount = 0;
@@ -55,7 +55,7 @@ export class OrderService {
       const orderItem = items.find(i => i.itemId === menuItem._id)
       
       if ( !orderItem )
-        throw new NotFoundException(MenuItem.name, 'Invalid item request');
+        throw new NotFoundException(ERROR_CODE.RESOURCE_NOT_FOUND, 'Invalid item request');
       if ( orderItem.quantity > menuItem.stock_quantity || menuItem.status === ITEMSTATUS.UNAVAILABLE )
         throw new ConflictException(ERROR_CODE.INSUFFICIENT_STOCK, 'Insufficient stock for ' + menuItem.name);
       if ( orderItem.price !== menuItem.price )
@@ -115,7 +115,7 @@ export class OrderService {
     if ( orderData.customer?.customerId ) {
       const orderCache = await this.redis.get(`draft_order:${dto.restaurantId}:${dto._id}`);
       if ( !orderCache ) {
-        throw new NotFoundException(Order.name, dto._id || 'unknown');
+        throw new NotFoundException(ERROR_CODE.RESOURCE_NOT_FOUND, 'Draft order not found');
       }
       orderData._id = dto._id || new Types.ObjectId();
       orderData.status = OrderStatus.PROGRESS
@@ -130,7 +130,7 @@ export class OrderService {
     // Check restaurant open status
     const restaurantData = await this.redis.get(`restaurant_opened:${restaurantId}`);
     if ( !restaurantData )
-      throw new NotFoundException(Restaurant.name, 'Restaurant is closed');
+      throw new NotFoundException(ERROR_CODE.RESOURCE_NOT_FOUND, 'Restaurant is closed');
 
     const restaurant = JSON.parse(restaurantData) as Restaurant;
     const { ownerId } = restaurant;
@@ -157,7 +157,7 @@ export class OrderService {
     ).select(select).lean().exec();
 
     if ( menuItems.length !== items.length )
-      throw new NotFoundException(MenuItem.name, 'One or more items not found');
+      throw new NotFoundException(ERROR_CODE.RESOURCE_NOT_FOUND, 'One or more items not found');
 
     // Calculate Total Amount
     let totalAmount = 0;
@@ -166,7 +166,7 @@ export class OrderService {
       const orderItem = items.find(i => i.itemId === menuItem._id)
       
       if ( !orderItem )
-        throw new NotFoundException(MenuItem.name, 'Invalid item request');
+        throw new NotFoundException(ERROR_CODE.RESOURCE_NOT_FOUND, 'Invalid item request');
       if ( orderItem.quantity > menuItem.stock_quantity || menuItem.status === ITEMSTATUS.UNAVAILABLE )
         throw new ConflictException(ERROR_CODE.INSUFFICIENT_STOCK, 'Insufficient stock for ' + menuItem.name);
       if ( orderItem.price !== menuItem.price )
@@ -297,7 +297,7 @@ export class OrderService {
 
     const order = await this.orderModel.findById(orderId);
     if ( !order )
-      throw new NotFoundException(Order.name, orderId);
+      throw new NotFoundException(ERROR_CODE.RESOURCE_NOT_FOUND, 'Order not found');
     if ( order.paymentStatus !== OrderPaymentStatus.UNPAID)
       throw new ConflictException(ERROR_CODE.CONFLICT_INPUT_ERROR, 'Order already paid');
 
@@ -310,7 +310,7 @@ export class OrderService {
   async changeOrderStatus(orderId: Types.ObjectId, status: OrderStatus): Promise<Order> {
     const order = await this.orderModel.findById(orderId);
     if ( !order )
-      throw new NotFoundException(Order.name, orderId);
+      throw new NotFoundException(ERROR_CODE.RESOURCE_NOT_FOUND, 'Order not found');
 
     order.status = status;
     await order.save()

@@ -5,7 +5,6 @@ import { Model, Types } from 'mongoose';
 import { ITEMSTATUS, MenuItem, MenuItemDocument } from './schemas/menu-items.schema';
 import { CreateItemDto } from './dto/create-item.dto';
 import { Shift, Staff, StaffDocument } from './schemas/staff.schema';
-import { User, UserDocument } from '../auth/schema/user.schema';
 import { Inject, Injectable } from '@nestjs/common';
 import Redis from 'ioredis';
 import { TABLE_NAME, TableDocument } from './schemas/table.schema';
@@ -13,12 +12,12 @@ import { CreateTableDto } from './dto/create-table.dto';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
 import { INJECTION_TOKEN } from 'src/common/constants/injection-token.constant';
-import { ROLE } from 'src/common/constants/role.constant';
-import { UserHeaderRequest } from '../auth/auth.types';
-import { RESTAURANT_ROLE, RestaurantRole } from 'src/common/constants/restaurant-role.constant';
+import { RESTAURANT_ROLE } from 'src/common/constants/restaurant-role.constant';
 import { ConflictException, ForbiddenException, NotFoundException } from 'src/common/exceptions';
 import { TimeUtil } from 'src/common/utils/time.util';
 import { ERROR_CODE } from 'src/common/constants/error-code.constant';
+import { User, UserDocument } from '../auth/schema/user.xxx.schema';
+import { AccessTokenPayload } from '../auth/auth.service.xxx';
 
 export interface MenuItemsOut {
   active: MenuItem[];
@@ -38,41 +37,27 @@ export class RestaurantService {
     @Inject(INJECTION_TOKEN.REDIS_CLIENT) private readonly redis: Redis
   ) {}
 
-  async create(user: UserHeaderRequest, dto: CreateRestaurantDto): Promise<RestaurantDocument> {
+  async create(user: AccessTokenPayload, dto: CreateRestaurantDto): Promise<RestaurantDocument> {
 
     // Kiểm tra nhà hàng tạo 1 lần nữa thì trả về lựa chọn là cở sở 2 hay gì đó 
-    const { ATPayload: payload } = user
 
     const newRestaurant = await this.restaurantModel.create({
       ...dto,
-      ownerId: user.info._id,
+      ownerId: user.sub,
     });
-
-    // Update User role 
-    if (user.info.role === ROLE.GUEST) {
-      // Update value session in redis
-      user.info.role = ROLE.USER
-      user.ATPayload.role = ROLE.USER
-      const ttl = await this.redis.ttl(`auth:${payload.sub}:${payload.sid}`);
-      await Promise.all([
-        this.redis.set(`auth:${payload.sub}:${payload.sid}`, JSON.stringify(user), 'EX', ttl),
-        this.userModel.updateOne(
-          { _id: user.info._id},
-          { role: ROLE.USER }
-        ).exec()
-      ])
-    }
 
     
     // Create a owner
-    const { email, phone, user_name, avatar } = user.info;
+    
+    const userInfo = await this.userModel.findById(user.sub).lean().exec();
+    
     await this.staffModel.create({
-      userId: user.info._id,
+      userId: user.sub,
       restaurantId: newRestaurant._id,
-      name: user_name,
-      email,
-      phone,
-      avatar,
+      name: userInfo?.full_name,
+      email: userInfo?.email,
+      phone: userInfo?.phone,
+      avatar: userInfo?.avatar_url,
       role: RESTAURANT_ROLE.OWNER,
       shift: Shift.FULLTIME,
       workingHours: "24h",
@@ -94,7 +79,7 @@ export class RestaurantService {
       { new: true } // Return the updated document
     ).lean().exec();
     if ( !updatedRestaurant )
-      throw new NotFoundException(Restaurant.name, restaurantId);
+      throw new NotFoundException(ERROR_CODE.RESOURCE_NOT_FOUND, 'Restaurant not found', { restaurantId });
 
     return updatedRestaurant;
   }
@@ -103,7 +88,7 @@ export class RestaurantService {
 
     const restaurant = await this.restaurantModel.findById(restaurantId).lean().exec();
     if ( !restaurant )
-      throw new NotFoundException(Restaurant.name, restaurantId);
+      throw new NotFoundException(ERROR_CODE.RESOURCE_NOT_FOUND, 'Restaurant not found', { restaurantId });
 
     // Check if restaurant is open
     const isOpened = await this.redis.get(`restaurant_opened:${restaurantId}`);
@@ -128,7 +113,7 @@ export class RestaurantService {
     ).lean().exec();
     
     if ( !restaurant )
-      throw new NotFoundException(Restaurant.name, restaurantId);
+      throw new NotFoundException(ERROR_CODE.RESOURCE_NOT_FOUND, 'Restaurant not found', { restaurantId });
 
     // Open to end of day, or until owner close
     const ttl = TimeUtil.getTtlUntilEndOfDay()
@@ -309,7 +294,7 @@ export class RestaurantService {
 
     // Validate staff
     if ( !staff )
-      throw new NotFoundException(Staff.name, staffId);
+      throw new NotFoundException(ERROR_CODE.RESOURCE_NOT_FOUND, 'Staff not found', { staffId });
 
     // Check permission
     const restaurant: any = staff.restaurantId;

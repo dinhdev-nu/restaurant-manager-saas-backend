@@ -2,9 +2,9 @@ import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Role } from '../constants/role.constant';
 import { ROLES_KEY } from '../decorators';
-import { UserHeaderRequest } from './jwt-auth.guard';
 import { ForbiddenException } from '../exceptions';
 import { ERROR_CODE } from '../constants/error-code.constant';
+import { AccessTokenPayload } from 'src/modules/auth/auth.service.xxx';
 
 
 export const ROLE_GUARD = 'roles';
@@ -27,9 +27,9 @@ export class RolesGuard implements CanActivate {
       return true; // No roles required, allow access
 
     const req = context.switchToHttp().getRequest();
-    const user = req.user as UserHeaderRequest;
+    const user = req.user as AccessTokenPayload;
 
-    const userRole = user.info.role;
+    const userRole = user.system_role;
 
     const hasRole = requiredRoles.includes(userRole);
 

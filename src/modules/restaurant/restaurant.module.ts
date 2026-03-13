@@ -5,8 +5,8 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { RestaurantSchema } from './schemas/restaurant.schema';
 import { MenuItemSchema } from './schemas/menu-items.schema';
 import { Staff, StaffSchema } from './schemas/staff.schema';
-import { User, UserSchema } from '../auth/schema/user.schema';
 import { TABLE_NAME, TableSchema } from './schemas/table.schema';
+import { User, UserSchema } from '../auth/schema/user.xxx.schema';
 
 @Module({
   controllers: [RestaurantController],
