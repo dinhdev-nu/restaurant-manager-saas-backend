@@ -52,11 +52,11 @@ export class RestaurantService {
     const userInfo = await this.userModel.findById(user.sub).lean().exec();
     
     await this.staffModel.create({
-      userId: user.sub,
+      userId: new Types.ObjectId(user.sub),
       restaurantId: newRestaurant._id,
       name: userInfo?.full_name,
       email: userInfo?.email,
-      phone: userInfo?.phone,
+      phone: userInfo?.phone || dto.phone,
       avatar: userInfo?.avatar_url,
       role: RESTAURANT_ROLE.OWNER,
       shift: Shift.FULLTIME,
@@ -128,9 +128,10 @@ export class RestaurantService {
   async getListRestaurantsByUserId(userId: Types.ObjectId): Promise<Object | null> {
 
     // Fillter in staff 
+    console.log("userId:", userId);
     const select = ["-__v", "-ownerId"].join(" ")
     const staffSelect = ["-__v", "-restaurantId"].join(" ")
-    const roleAndRestaurant = await this.staffModel.find({ userId: new Types.ObjectId(userId) })
+    const roleAndRestaurant = await this.staffModel.find({ userId: userId })
                   .populate({
                     path: "restaurantId",
                     select
@@ -140,6 +141,7 @@ export class RestaurantService {
                   .exec();
 
     // Group staff trong code vì dữ liệu nhỏ đơn giản
+    console.log("roleAndRestaurant:", roleAndRestaurant);
     const staffGroup = roleAndRestaurant.reduce((acc, cur) => {
       const value = acc[cur.role] || []
       acc[cur.role] = [...value, cur]

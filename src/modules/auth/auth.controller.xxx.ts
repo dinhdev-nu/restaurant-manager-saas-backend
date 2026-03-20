@@ -373,8 +373,11 @@ export class AuthController {
         @CurrentUser('jti') jti: string,
         @Res({ passthrough: true }) res: Response
     ) {
-        res.clearCookie('refresh_token', { httpOnly: true, secure: true, sameSite: 'strict' });
-        return this.authService.revokeSession(user_id, dto.session_id, refresh_token, jti)
+        const { revoked, isCurrentSession } = await this.authService.revokeSession(user_id, dto.session_id, refresh_token, jti)
+         if (revoked && isCurrentSession) {
+            res.clearCookie('refresh_token', { httpOnly: true, secure: true, sameSite: 'strict' });
+        }           
+        return  { revoked }
     }
 
     // ─── Phone verification ───────────────────────────────────────────────────

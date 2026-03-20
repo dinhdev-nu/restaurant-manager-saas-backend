@@ -906,7 +906,6 @@ export class AuthService {
         current_refresh_token: string
     ): Promise<{ sessions: Array<any> }> {
         const sessions = await this.sessionRepository.findAllByUserId(user_id);
-        
         const hash = await HashUtil.hashWithSHA256(current_refresh_token);
         const mapped = sessions.map(s => ({
             session_id: s._id,
@@ -925,7 +924,7 @@ export class AuthService {
         session_id: Types.ObjectId, 
         current_refresh_token: string,
         access_token_jti: string
-    ): Promise<{ revoked: boolean}> {
+    ): Promise<{ revoked: boolean, isCurrentSession: boolean}> {
 
         const session = await this.sessionRepository.findOne({
             _id: session_id,
@@ -935,7 +934,7 @@ export class AuthService {
         if (!session) {
             throw new NotFoundException(ERROR_CODE.SESSION_NOT_FOUND, "Phiên đăng nhập không tồn tại")
         }
-
+        
         await Promise.all([
             this.sessionRepository.updateSessionLogoutByTokenHash(session.token_hash), // Cập nhật session trong DB
             this.redis.del(`${SESSION_PREFIX}${session.token_hash}`) // Xoá session trong Redis
@@ -949,7 +948,7 @@ export class AuthService {
             }
         }
             
-        return { revoked: true } 
+        return { revoked: true, isCurrentSession }
 
     }
 

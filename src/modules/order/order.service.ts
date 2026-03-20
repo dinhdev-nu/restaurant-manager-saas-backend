@@ -52,7 +52,7 @@ export class OrderService {
     let totalAmount = 0;
 
     for ( const menuItem of menuItems) {
-      const orderItem = items.find(i => i.itemId === menuItem._id)
+      const orderItem = items.find(i => i.itemId == menuItem._id)
       
       if ( !orderItem )
         throw new NotFoundException(ERROR_CODE.RESOURCE_NOT_FOUND, 'Invalid item request');
@@ -163,7 +163,7 @@ export class OrderService {
     let totalAmount = 0;
 
     for ( const menuItem of menuItems) {
-      const orderItem = items.find(i => i.itemId === menuItem._id)
+      const orderItem = items.find(i => i.itemId == menuItem._id)
       
       if ( !orderItem )
         throw new NotFoundException(ERROR_CODE.RESOURCE_NOT_FOUND, 'Invalid item request');
@@ -275,11 +275,11 @@ export class OrderService {
       status?: OrderStatus 
     }
   ): Promise<Order[]> {
-    const query: any = { restaurantId };
+    const query: any = { restaurantId: restaurantId.toString() };
     if (fillter?.status) {
       query.status = fillter.status;
     }
-
+    console.log('Querying orders with:', query, { page, limit });
     const skip = (page -1) * limit;
     const select = ['-__v', '-restaurantId'];
     const orders = await this.orderModel.find(query)
@@ -289,6 +289,7 @@ export class OrderService {
                   .select(select)
                   .lean()
                   .exec();
+    console.log('Found orders:', orders);
     return orders;  
   }
 
