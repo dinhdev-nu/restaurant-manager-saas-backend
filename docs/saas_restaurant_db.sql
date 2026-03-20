@@ -1,11 +1,13 @@
 -- ============================================================
 --  SaaS Multi-Restaurant Management Platform
 --  Database Schema — MySQL 8.0+  (Production-Grade)
---  Version : 1.1.0
+--  Version : 1.2.0
 --  Encoding: utf8mb4 / utf8mb4_unicode_ci
---  Changes  : + system_role, + ip_address on resets,
---             + remember_me on sessions,
---             - oauth token fields
+--  Changes  :
+--    v1.1.0 + system_role, + ip_address on resets,
+--             + remember_me on sessions, - oauth token fields
+--    v1.2.0 - two_factor_secret (TOTP → OTP Email 2FA, secret không cần lưu DB)
+--             two_factor_enabled giữ nguyên — chỉ là on/off flag
 -- ============================================================
 
 SET NAMES utf8mb4;
@@ -37,15 +39,20 @@ CREATE TABLE users (
     -- superadmin : team vận hành, toàn quyền hệ thống
     -- user       : người dùng thông thường (chủ nhà hàng, khách đặt online)
     -- guest      : không lưu DB — xử lý ở middleware
-    system_role         ENUM('superadmin','user') NOT NULL DEFAULT 'user',
+    system_role         ENUM('admin','user') NOT NULL DEFAULT 'user',
 
     status              ENUM('active','inactive','banned','pending') NOT NULL DEFAULT 'active',
     email_verified_at   DATETIME        NULL,
     phone_verified_at   DATETIME        NULL,
     last_login_at       DATETIME        NULL,
     last_login_ip       VARCHAR(45)     NULL                            COMMENT 'IPv4 or IPv6',
-    two_factor_secret   VARCHAR(64)     NULL                            COMMENT 'TOTP secret — AES-256 encrypted',
-    two_factor_enabled  TINYINT(1)      NOT NULL DEFAULT 0,
+
+    -- [v1.2.0] two_factor_secret đã bị xoá.
+    -- 2FA chuyển từ TOTP (Google Authenticator) sang OTP Email.
+    -- OTP được sinh runtime và lưu tạm trong Redis (otp:2fa:{temp_token} TTL 300s).
+    -- Không cần lưu secret dài hạn trong DB.
+    two_factor_enabled  TINYINT(1)      NOT NULL DEFAULT 0              COMMENT '0 = tắt, 1 = bật — OTP sẽ gửi qua email khi đăng nhập',
+
     preferences         JSON            NULL                            COMMENT '{"language":"vi","theme":"dark","notifications":{}}',
     metadata            JSON            NULL,
     created_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -85,29 +92,6 @@ CREATE TABLE user_sessions (
     CONSTRAINT fk_session_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Refresh token sessions — cho phép revoke thực sự dù dùng JWT stateless';
-
-
--- ------------------------------------------------------------
-
-CREATE TABLE password_resets (
-    id          CHAR(36)        NOT NULL DEFAULT (UUID()),
-    user_id     CHAR(36)        NOT NULL,
-    token_hash  VARCHAR(255)    NOT NULL    COMMENT 'SHA-256 của reset token gửi qua email',
-    expires_at  DATETIME        NOT NULL    COMMENT 'Hiệu lực 15 phút',
-    used_at     DATETIME        NULL        COMMENT 'Set khi đã dùng — token không thể tái sử dụng',
-
-    -- [FIX v1.1] Lưu IP để rate-limit và audit — phát hiện spam reset link
-    ip_address  VARCHAR(45)     NULL,
-
-    created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    PRIMARY KEY (id),
-    UNIQUE KEY uq_password_reset_token  (token_hash),
-    KEY idx_pwreset_user                (user_id),
-    KEY idx_pwreset_ip                  (ip_address),
-    CONSTRAINT fk_pwreset_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 
 -- ------------------------------------------------------------
 
@@ -475,10 +459,11 @@ CREATE TABLE staff_shifts (
     created_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     PRIMARY KEY (id),
-    KEY idx_shift_staff (staff_id, shift_date),
-    KEY idx_shift_date  (restaurant_id, shift_date),
-    CONSTRAINT fk_shift_staff    FOREIGN KEY (staff_id)    REFERENCES staff(id) ON DELETE CASCADE,
-    CONSTRAINT fk_shift_approver FOREIGN KEY (approved_by) REFERENCES staff(id)
+    KEY idx_shift_staff         (staff_id, shift_date),
+    KEY idx_shift_restaurant    (restaurant_id, shift_date),
+    CONSTRAINT fk_shift_restaurant FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
+    CONSTRAINT fk_shift_staff      FOREIGN KEY (staff_id)      REFERENCES staff(id) ON DELETE CASCADE,
+    CONSTRAINT fk_shift_approver   FOREIGN KEY (approved_by)   REFERENCES staff(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
@@ -489,30 +474,29 @@ CREATE TABLE staff_shifts (
 CREATE TABLE customers (
     id                  CHAR(36)        NOT NULL DEFAULT (UUID()),
     restaurant_id       CHAR(36)        NOT NULL,
-    user_id             CHAR(36)        NULL,
+    user_id             CHAR(36)        NULL                    COMMENT 'Liên kết account nếu có',
     full_name           VARCHAR(150)    NOT NULL,
     phone               VARCHAR(20)     NULL,
     email               VARCHAR(255)    NULL,
     date_of_birth       DATE            NULL,
     gender              ENUM('male','female','other') NULL,
+    avatar_url          TEXT            NULL,
     loyalty_points      INT             NOT NULL DEFAULT 0,
-    total_spent         DECIMAL(15,2)   NOT NULL DEFAULT 0.00,
     total_orders        INT             NOT NULL DEFAULT 0,
-    tier                ENUM('bronze','silver','gold','platinum') NOT NULL DEFAULT 'bronze',
+    total_spent         DECIMAL(15,2)   NOT NULL DEFAULT 0.00,
+    last_order_at       DATETIME        NULL,
     notes               TEXT            NULL,
-    preferred_language  CHAR(5)         NULL DEFAULT 'vi',
-    marketing_consent   TINYINT(1)      NOT NULL DEFAULT 0,
     tags                JSON            NULL,
     metadata            JSON            NULL,
-    last_visit_at       DATETIME        NULL,
+    is_blocked          TINYINT(1)      NOT NULL DEFAULT 0,
     created_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY (id),
     KEY idx_customer_restaurant (restaurant_id),
-    KEY idx_customer_user       (user_id),
     KEY idx_customer_phone      (restaurant_id, phone),
-    KEY idx_customer_tier       (restaurant_id, tier),
+    KEY idx_customer_email      (restaurant_id, email),
+    KEY idx_customer_user       (user_id),
     CONSTRAINT fk_customer_restaurant FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
     CONSTRAINT fk_customer_user       FOREIGN KEY (user_id)       REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -523,11 +507,10 @@ CREATE TABLE customers (
 CREATE TABLE customer_addresses (
     id              CHAR(36)        NOT NULL DEFAULT (UUID()),
     customer_id     CHAR(36)        NOT NULL,
-    label           VARCHAR(50)     NULL,
+    label           VARCHAR(50)     NULL                    COMMENT 'Nhà, Cơ quan...',
     full_address    TEXT            NOT NULL,
-    city            VARCHAR(100)    NULL,
     district        VARCHAR(100)    NULL,
-    ward            VARCHAR(100)    NULL,
+    city            VARCHAR(100)    NULL,
     latitude        DECIMAL(10,8)   NULL,
     longitude       DECIMAL(11,8)   NULL,
     is_default      TINYINT(1)      NOT NULL DEFAULT 0,
@@ -1004,5 +987,8 @@ CREATE TABLE system_settings (
 -- ============================================================
 SET FOREIGN_KEY_CHECKS = 1;
 -- ============================================================
---  v1.1.0 — 36 tables, tables only
+--  v1.2.0 — 36 tables
+--
+--  Migration từ v1.1.0 lên v1.2.0 (nếu DB đã tồn tại):
+--  ALTER TABLE users DROP COLUMN two_factor_secret;
 -- ============================================================
