@@ -441,7 +441,7 @@ export class AuthController {
             httpOnly: true, secure: true, sameSite: 'strict',
             maxAge: this.getTimeToLifeCookies(false),
         });
-        const url = this.config.client.clientUrl + "oauth/callback?access_token=" + response.access_token
+        const url = this.config.client.clientUrl + "/oauth/callback?access_token=" + response.access_token
         return res.redirect(url);
     }
 

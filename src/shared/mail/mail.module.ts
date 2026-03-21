@@ -18,7 +18,14 @@ import { AppConfigService } from 'src/config/config.service';
           },
           tls: {
             rejectUnauthorized: false, // Allow self-signed certificates
-          }
+          },
+          connectionTimeout: 10000,
+          greetingTimeout: 10000,
+          socketTimeout: 15000,
+
+          pool: true,
+          maxConnections: 3,
+          maxMessages: 50
         },
         defaults: {
           from: `"No Reply" <${config.mail.user}>`,
