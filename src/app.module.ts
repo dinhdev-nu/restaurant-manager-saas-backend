@@ -22,6 +22,7 @@ import { LoggerMiddleware } from './common/middlewares/logger.middleware';
 import { SharedThrottlerModule } from './shared/throttler/throttler.module';
 import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
 import { QueueModule } from './queue/queue.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   controllers: [],
@@ -42,6 +43,7 @@ import { QueueModule } from './queue/queue.module';
     SharedThrottlerModule,
     QueueModule,
 
+    HealthModule,
     SseModule,
     AuthModule,
     RestaurantModule,
