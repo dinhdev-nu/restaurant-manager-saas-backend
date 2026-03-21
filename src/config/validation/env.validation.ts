@@ -106,10 +106,18 @@ export class EnvironmentVariables {
     REDIS_DB: number;
 
     @IsString()
-    MONGO_URI: string;    
+    MONGO_URI: string;  
 
     @IsString()
     SMTP_SERVICE: string;
+
+    @IsString()
+    SMTP_HOST: string;
+
+    @IsInt()
+    @Min(1)
+    @Max(65535)
+    SMTP_PORT: number;
 
     @IsString()
     SMTP_USER: string;

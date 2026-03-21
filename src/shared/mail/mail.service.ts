@@ -1,54 +1,40 @@
+import { MailerService } from '@nestjs-modules/mailer';
 import { Injectable } from '@nestjs/common';
 import { readFileSync, existsSync } from 'fs';
-import * as nodemailer from "nodemailer"
 import * as path from 'path';
 import { AppConfigService } from 'src/config/config.service';
 
 @Injectable()
 export class MailService {
 
-  private transporter: nodemailer.Transporter;
-
-  constructor(
+  constructor( 
+    private readonly mailer: MailerService,
     private readonly config: AppConfigService
-  ) {
-
-    this.transporter = nodemailer.createTransport({
-      service: this.config.mail.service,
-      auth: {
-        user: this.config.mail.user,
-        pass: this.config.mail.pass,
-      }
-    })
-  }
+  ) {}
 
   async sendOtpMail(to: string, subject: string, otp: string) {
     // Tim template o ca runtime src va dist
-    const candidates = [
-      path.join(__dirname, 'templates', 'otp-register.html'),
-      path.join(process.cwd(), 'src', 'shared', 'mail', 'templates', 'otp-register.html'),
-      path.join(process.cwd(), 'dist', 'shared', 'mail', 'templates', 'otp-register.html'),
-    ];
-
-    const templatePath = candidates.find((p) => existsSync(p));
-    if (!templatePath) {
-      throw new Error(`OTP template not found. Checked: ${candidates.join(', ')}`);
-    }
-
-    let html = readFileSync(templatePath, 'utf-8');
+    let html = await this.getTemplate('otp.template.html');
 
     // Replace OTP
     html = html.replace('{{.otp}}', otp);
 
     // Gửi email
-    await this.transporter.sendMail({
+    await this.mailer.sendMail({
       from: this.config.mail.user,
       to,
       subject,
       html
     })
-
   }
 
+  private async getTemplate(templateName: string): Promise<string> {
+    const templateDir = path.join(__dirname, 'templates', templateName);
+    console.log('Looking for email template at:', templateDir);
+    if (!existsSync(templateDir)) {
+      console.error(`Email template "${templateName}" not found`);
+    }
 
+    return readFileSync(templateDir, 'utf-8');
+  }
 }
