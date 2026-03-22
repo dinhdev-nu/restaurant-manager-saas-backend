@@ -6,6 +6,10 @@ export interface IMailConfig {
     port: number;
     user: string;
     pass: string;
+
+    sendgridSender: string;
+    sendgridApiKey: string;
+
 }
 
 export default registerAs('mail', () => ({
@@ -14,4 +18,7 @@ export default registerAs('mail', () => ({
     port: Number(process.env.SMTP_PORT),
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASSWORD,
+
+    sendgridSender: process.env.SENDGRID_SENDER,
+    sendgridApiKey: process.env.SENDGRID_API_KEY,
 }))
