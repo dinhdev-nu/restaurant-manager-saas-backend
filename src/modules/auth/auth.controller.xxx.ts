@@ -131,7 +131,7 @@ export class AuthController {
             res.cookie('refresh_token', response.refresh_token, {
                 httpOnly: true,
                 secure: true,
-                sameSite: 'strict',
+                sameSite: 'none',
                 maxAge: dto.remember_me ? 30 * 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000,
             });
             return { access_token: response.access_token }
@@ -170,7 +170,7 @@ export class AuthController {
     ) {
         const response = await this.authService.verify2FAOTP(dto.temp_token, dto.otp, user_ip)
         res.cookie('refresh_token', response.refresh_token, {
-            httpOnly: true, secure: true, sameSite: 'strict',
+            httpOnly: true, secure: true, sameSite: 'none',
             maxAge: this.getTimeToLifeCookies(response.remember_me),
         });
         return { access_token: response.access_token }
@@ -197,7 +197,7 @@ export class AuthController {
         const response = await this.authService.refreshToken(refresh_token)
         if (response.refresh_token) {
             res.cookie('refresh_token', response.refresh_token, {
-                httpOnly: true, secure: true, sameSite: 'strict',
+                httpOnly: true, secure: true, sameSite: 'none',
                 maxAge: this.getTimeToLifeCookies(response.remember_me ?? false),
             });
         }
@@ -214,7 +214,7 @@ export class AuthController {
         @CurrentUser('jti') jti: string,
         @Res({ passthrough: true }) res: Response
     ) {
-        res.clearCookie('refresh_token', { httpOnly: true, secure: true, sameSite: 'strict' });
+        res.clearCookie('refresh_token', { httpOnly: true, secure: true, sameSite: 'none' });
         return this.authService.logout(refresh_token, jti)
     }
 
@@ -229,7 +229,7 @@ export class AuthController {
         @Cookie('REFRESH_TOKEN') refresh_token: string,
         @Res({ passthrough: true }) res: Response
     ) {
-        res.clearCookie('refresh_token', { httpOnly: true, secure: true, sameSite: 'strict' });
+        res.clearCookie('refresh_token', { httpOnly: true, secure: true, sameSite: 'none' });
         return this.authService.logoutAllSessions(user_id, refresh_token, jti)
     }
 
@@ -375,7 +375,7 @@ export class AuthController {
     ) {
         const { revoked, isCurrentSession } = await this.authService.revokeSession(user_id, dto.session_id, refresh_token, jti)
          if (revoked && isCurrentSession) {
-            res.clearCookie('refresh_token', { httpOnly: true, secure: true, sameSite: 'strict' });
+            res.clearCookie('refresh_token', { httpOnly: true, secure: true, sameSite: 'none' });
         }           
         return  { revoked }
     }
@@ -438,7 +438,7 @@ export class AuthController {
         }
         const response = await this.authService.oauthCallback(provider, code, state, dto)
         res.cookie('refresh_token', response.refresh_token, {
-            httpOnly: true, secure: true, sameSite: 'strict',
+            httpOnly: true, secure: true, sameSite: 'none',
             maxAge: this.getTimeToLifeCookies(false),
         });
         const url = this.config.client.clientUrl + "/oauth/callback?access_token=" + response.access_token
