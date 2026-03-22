@@ -126,6 +126,12 @@ export class EnvironmentVariables {
     SMTP_PASSWORD: string;
 
     @IsString()
+    SENDGRID_SENDER: string;
+
+    @IsString()
+    SENDGRID_API_KEY: string;
+
+    @IsString()
     GOOGLE_CLIENT_ID: string;
 
     @IsString()

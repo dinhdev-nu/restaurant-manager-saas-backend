@@ -37,7 +37,7 @@ export class OTPProcessor extends WorkerHost {
             this.logger.log(`Successfully sent OTP email to ${email}`);
             return { sent: true };
         } catch (error) {
-            this.logger.error(`Failed to send OTP email to ${email}: ${error.message}`);
+            this.logger.error(`Failed to send OTP email to ${email}: ${error}`);
             throw error;
         }
     }
@@ -56,6 +56,6 @@ export class OTPProcessor extends WorkerHost {
 
     @OnWorkerEvent('failed')
     onFailed(job: Job, error: Error) {
-        this.logger.error(`Job failed: ${job.id} (${job.name}) - ${error.message}`);
+        this.logger.error(`Job failed: ${job.id} (${job.name}) - ${error}`);
     }
 }
