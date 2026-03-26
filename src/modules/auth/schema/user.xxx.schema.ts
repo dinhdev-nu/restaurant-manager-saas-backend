@@ -3,7 +3,6 @@ import { HydratedDocument } from 'mongoose';
 
 export type UserDocument = HydratedDocument<User>;
 
-// ─── Nested types ────────────────────────────────────────────
 @Schema({ _id: false })
 export class UserNotificationPreferences {
   @Prop({ type: Boolean, default: true })
@@ -28,7 +27,6 @@ export class UserPreferences {
   notifications: UserNotificationPreferences;
 }
 
-// ─── Main schema ─────────────────────────────────────────────
 @Schema({
   collection: 'users',
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
@@ -37,13 +35,11 @@ export class UserPreferences {
     transform: (_doc, ret: any) => {
       delete ret.__v;
       delete ret.password_hash;
-      delete ret.two_factor_secret;
       return ret;
     },
   },
 })
 export class User {
-  // ── Identity ──────────────────────────────────────────────
   @Prop({
     type: String,
     required: true,
@@ -57,7 +53,6 @@ export class User {
   @Prop({ type: String, default: null, trim: true })
   phone: string | null;
 
-  /** NULL nếu chỉ dùng OAuth */
   @Prop({ type: String, default: null, select: false })
   password_hash: string | null;
 
@@ -73,12 +68,6 @@ export class User {
   @Prop({ type: String, enum: ['male', 'female', 'other'], default: null })
   gender: 'male' | 'female' | 'other' | null;
 
-  // ── Platform role ─────────────────────────────────────────
-  /**
-   * admin : team vận hành, toàn quyền hệ thống
-   * user       : người dùng thông thường (chủ nhà hàng, khách đặt online)
-   * guest      : không lưu DB — xử lý ở middleware
-   */
   @Prop({
     type: String,
     enum: ['admin', 'user'],
@@ -87,7 +76,6 @@ export class User {
   })
   system_role: 'admin' | 'user';
 
-  // ── Status ────────────────────────────────────────────────
   @Prop({
     type: String,
     enum: ['active', 'inactive', 'banned', 'pending'],
@@ -96,46 +84,36 @@ export class User {
   })
   status: 'active' | 'inactive' | 'banned' | 'pending';
 
-  // ── Verification ──────────────────────────────────────────
   @Prop({ type: Date, default: null })
   email_verified_at: Date | null;
 
   @Prop({ type: Date, default: null })
   phone_verified_at: Date | null;
 
-  // ── Login tracking ────────────────────────────────────────
   @Prop({ type: Date, default: null })
   last_login_at: Date | null;
 
-  /** IPv4 or IPv6 */
   @Prop({ type: String, default: null, maxlength: 45 })
   last_login_ip: string | null;
 
-  // ── 2FA ───────────────────────────────────────────────────
   @Prop({ type: Boolean, default: false })
   two_factor_enabled: boolean;
 
-  // ── Preferences & metadata ────────────────────────────────
-  /** {"language":"vi","theme":"dark","notifications":{}} */
   @Prop({ type: UserPreferences, default: () => ({}) })
   preferences: UserPreferences;
 
-  // ── Soft delete ───────────────────────────────────────────
   @Prop({ type: Date, default: null, index: true })
   deleted_at: Date | null;
 
-  // ── Auto-timestamps (injected by `timestamps` option) ─────
   created_at: Date;
   updated_at: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
 
-// ─── Indexes ─────────────────────────────────────────────────
 UserSchema.index({ phone: 1 }, { sparse: true });
-UserSchema.index({ deleted_at: 1, status: 1 }); // compound — soft-delete queries
+UserSchema.index({ deleted_at: 1, status: 1 });
 
-// ─── Virtual: isVerified ─────────────────────────────────────
 UserSchema.virtual('is_email_verified').get(function (this: UserDocument) {
   return this.email_verified_at !== null;
 });
